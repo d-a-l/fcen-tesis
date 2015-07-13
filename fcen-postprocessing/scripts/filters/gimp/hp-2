@@ -1,0 +1,54 @@
+#!/bin/bash
+{
+cat <<EOF
+
+(define (do-retouch filename outfile)
+ (let* (
+ (image (car (gimp-file-load RUN-NONINTERACTIVE filename filename)))
+ (base-layer (car (gimp-image-merge-visible-layers image CLIP-TO-IMAGE)))
+ (tmp-layer (car (gimp-layer-copy base-layer FALSE)))
+ )
+ ; (gimp-image-add-layer image base-layer 0)
+ ; agregar layer a imagen  
+ (gimp-image-add-layer image tmp-layer -1)
+ (gimp-layer-set-visible tmp-layer TRUE)
+
+ ; filtros
+ ; aplicar gaussian
+ (plug-in-gauss RUN-NONINTERACTIVE image tmp-layer 100 100 1)
+ ; invertir
+ (gimp-invert tmp-layer)
+ ; opacidad a 50%
+ (gimp-layer-set-opacity tmp-layer 50)
+
+ ; merge
+ (set! base-layer (car (gimp-image-merge-down image tmp-layer 0)))
+
+ ; desaturate & umbral
+ (gimp-desaturate-full base-layer DESATURATE-LUMINOSITY)
+ (gimp-threshold base-layer 120 255)
+
+ ; guardar
+ (gimp-xcf-save RUN-NONINTERACTIVE image base-layer outfile outfile)
+ (gimp-image-delete image) ; ... or the memory will explode
+ )
+ )
+
+(gimp-message-set-handler 1) ; Messages to standard output
+
+(gimp-message "Tesis_0890_Lantos_page006.tif")
+(do-retouch "Tesis_0890_Lantos_page006.tif" "test/Tesis_0890_Lantos_page006_gb100.xcf")
+(gimp-quit 0)
+EOF
+
+} | gimp -i -b -
+
+
+#  (gimp-curves-spline base-layer HISTOGRAM-VALUE 6 #(0 0 147 44 255 122 ) )
+#  (file-png-save2 RUN-NONINTERACTIVE image base-layer outfile outfile 0 9 0 0 0 0 0 0 1 )
+#  ; (base-layer (car (gimp-image-merge-down image tmp-layer CLIP-TO-IMAGE)))
+
+# http://stackoverflow.com/questions/14946695/shell-script-programming-for-gimp
+# http://www.gimp.org/tutorials/Basic_Batch/
+# http://www.gimp.org/docs/scheme_plugin/scheme-overview.html
+# http://billauer.co.il/blog/2009/07/gimp-xcf-jpg-jpeg-convert-bash-script/

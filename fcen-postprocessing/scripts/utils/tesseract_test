@@ -1,0 +1,29 @@
+#!/bin/bash
+
+inicio_ns=`date +%s%N`
+inicio=`date +%s`
+
+# -------
+
+WORKING_DIR="" # .scantailor
+
+cd $WORKING_DIR/
+
+for i in *tif
+do 
+   CMD_TESSERACT="tesseract $i `basename $i .tif` -l spa hocr"
+   echo "ejecutando: $CMD_TESSERACT"
+   time eval $CMD_TESSERACT
+done
+
+
+# ---------
+
+
+fin_ns=`date +%s%N`
+fin=`date +%s`
+
+let total_ns=$fin_ns-$inicio_ns
+let total=$fin-$inicio
+
+echo -e "\n\ntiempo total: ${total}s [$total_ns nanoseg] \n"

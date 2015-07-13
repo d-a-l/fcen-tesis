@@ -1,0 +1,76 @@
+#!/bin/bash
+
+inicio_ns=`date +%s%N`
+inicio=`date +%s`
+
+STE_PATH=/opt/src/scantailor-enhanced/scantailor-cli
+FOLDER=""    # "/path"
+FILES=""     # "/path/file1.tif /path/file2.tif"
+
+OUT_DIR=".scantailor"
+
+# -----
+
+test_scantailor(){
+
+  local option_name=$1 # nombre que se colocara antes de la extension
+  local cmd_args=$2 # argumentos en scantailor-cli
+  
+  echo "## $option_name ##"; echo
+
+  if [ $FOLDER != "" ]
+    then
+      OUT_DIR=${OUT_DIR}_${option_name}
+      [[ -d "$OUT_DIR" ]] || mkdir $OUT_DIR || exit 1;
+
+      CMD_STE="$STE_PATH -l=1 -v $cmd_args $FOLDER/ $OUT_DIR/"
+      echo $CMD_STE
+      eval $CMD_STE
+
+  elif [ $FILES != "" ]
+    then
+      CMD_STE="$STE_PATH -l=1 -v $cmd_args $FILES $OUT_DIR/"
+      echo $CMD_STE
+      eval $CMD_STE
+      echo
+      for p in $FILES
+        do
+          file=$(basename "$p")
+          file_ext="${file##*.}"
+          file_name="${file%.*}"
+
+          CMD_MV="mv $OUT_DIR/$file $OUT_DIR/$file_name.$option_name.$file_ext"
+          echo $CMD_MV
+          eval $CMD_MV
+        done
+    else
+        echo "error: FOLDER y FILES variables nulas: $FOLDER - $FILES"
+  fi
+
+   echo
+}
+
+# ------ TEST
+
+# sin deteccion de contenido
+#test_scantailor "dcd-epd-eft-margins_0" "--disable-content-detection --enable-page-detection --enable-fine-tuning --margins=0";
+
+#automargins (respeta el layout original, detectando contenido)
+#test_scantailor "content_detect-auto_margins" "--content-detection --enable-auto-margins";
+
+# margenes fijos y deteccion de contenido
+#test_scantailor "content_detect-margins_10" "--content-detection --margins=10";
+
+# deteccion de imagenes
+#test_scantailor "dcd-epd-eft-margins_0-pict_r-color_m" "--disable-content-detection --enable-page-detection --enable-fine-tuning --margins=0 --picture-shape=rectangular --color-mode=mixed";
+
+
+# ----------------------
+
+fin_ns=`date +%s%N`
+fin=`date +%s`
+
+let total_ns=$fin_ns-$inicio_ns
+let total=$fin-$inicio
+
+echo -e "\n\ntiempo total: ${total}s [$total_ns nanoseg] \n"

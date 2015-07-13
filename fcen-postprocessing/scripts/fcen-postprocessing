@@ -1,0 +1,109 @@
+#!/bin/bash
+
+inicio_ns=`date +%s%N`
+inicio=`date +%s`
+
+WORKING_DIR=working
+OUT_FILE_NAME="out_pdfbeads_tesseract.pdf"
+SCANTAILOR_MODE=1
+SCANTAILOR_ARGS="--disable-content-detection --enable-page-detection --enable-fine-tuning  --margins=0"
+SCANTAILOR_THRESHOLD="--threshold=0"
+SCANTAILOR_SOURCE_DIR=""
+TESSERACT_ARGS=""
+HPASS_PROC=hpass
+
+echo ""
+
+while [ $# -ne 0 ]
+do
+    arg="$1"
+    case "$arg" in
+        cut)
+            SCANTAILOR_MODE="1.5"
+            echo "mode: cut"
+            ;;
+        enhaced)
+            SCANTAILOR_ARGS="--content-detection=aggressive --margins=5 --despeckle=aggressive"
+            echo "mode: enhaced"
+            ;;
+        bolder)
+            SCANTAILOR_THRESHOLD="--threshold=5"
+            echo "mode: bolder"
+            ;;
+        justified)
+            TESSERACT_ARGS="-psm 6"
+            echo "mode: justified"
+            ;;
+        hpass)
+            SCANTAILOR_SOURCE_DIR=${HPASS_PROC}/
+            echo -e "mode: hpass\n"
+            echo -e "\n0. high pass filter"
+            echo -e   "===================\n"
+            time hpass $HPASS_PROC
+            ;;
+        clear)
+	    if [ -d "$WORKING_DIR" ]; then
+	       rm -R $WORKING_DIR
+	    fi
+	    if [ -f "$OUT_FILE_NAME" ]; then
+	       rm $OUT_FILE_NAME
+	    fi
+	    if [ -f "log" ]; then
+	       rm log
+	    fi
+	    if [ -d "$HPASS_PROC" ]; then
+	       rm -r $HPASS_PROC
+	    fi
+	    exit 0
+            ;;
+        *)
+            NOARGS="true"
+            ;;
+    esac
+    shift
+done
+
+if [ ! -d "$WORKING_DIR" ]
+then 
+   mkdir $WORKING_DIR
+fi
+
+echo -e "\n\n1. scantailor"
+echo -e   "=============\n"
+
+CMD_SCANTAILOR="scantailor-cli -l=$SCANTAILOR_MODE $SCANTAILOR_ARGS $SCANTAILOR_THRESHOLD ${SCANTAILOR_SOURCE_DIR}*.tif $WORKING_DIR/"
+
+echo "ejecutando: $CMD_SCANTAILOR" 
+
+time eval $CMD_SCANTAILOR
+
+echo -e "\n2. tesseract"
+echo -e "============\n"
+
+cd $WORKING_DIR/
+
+for i in *tif
+do 
+   CMD_TESSERACT="tesseract $i `basename $i .tif` -l spa $TESSERACT_ARGS hocr"
+   echo -e "\n== procesando $i ==";
+   echo "ejecutando: $CMD_TESSERACT"
+   time eval $CMD_TESSERACT
+done
+
+echo -e "\n3. pdfbeads"
+echo -e   "===========\n"
+
+CMD_PDFBEADS="pdfbeads -b JP2 *.tif > ../$OUT_FILE_NAME"
+echo "ejecutando: $CMD_PDFBEADS"
+time eval $CMD_PDFBEADS
+
+fin_ns=`date +%s%N`
+fin=`date +%s`
+
+let total_ns=$fin_ns-$inicio_ns
+let total=$fin-$inicio
+
+echo -e "\n\ntiempo total: ${total}s [$total_ns nanoseg] \n"
+
+
+# https://addons.mozilla.org/es/firefox/addon/hocr-editor/

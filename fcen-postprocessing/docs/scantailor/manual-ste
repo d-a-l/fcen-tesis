@@ -1,0 +1,96 @@
+
+Scan Tailor is a post-processing tool for scanned pages.
+Version: Jul 13 2015
+
+ScanTailor usage: 
+	1) scantailor
+	2) scantailor <project_file>
+	3) scantailor-cli [options] <images|directory|-> <output_directory>
+	4) scantailor-cli [options] <project_file> [output_directory]
+
+1)
+	start ScanTailor's GUI interface
+2)
+	start ScanTailor's GUI interface and load project file
+3)
+	batch processing images from command line; no GUI
+	file names are collected from arguments, input directory or stdin (-)
+4)
+	batch processing project from command line; no GUI
+	if output_directory is specified as last argument, it overwrites the one in project file
+
+Options:
+	--help, -h
+	--verbose, -v
+	--languge=<cs|de|...>	-- default: system language
+	--layout=, -l=<0|1|1.5|2>		-- default: 0
+			  0: auto detect
+			  1: one page layout
+			1.5: one page layout but cutting is needed
+			  2: two page layout
+	--layout-direction=, -ld=<lr|rl>	-- default: lr
+	--orientation=<left|right|upsidedown|none>
+						-- default: none
+	--rotate=<0.0...360.0>			-- it also sets deskew to manual mode
+	--deskew=<auto|manual>			-- default: auto
+	--skew-deviation=<0.0...)		-- default: 5.0; pages with bigger skew deviation will be painted in red
+	--disable-content-detection		-- default: enabled
+	--enable-page-detection			-- default: disabled
+	--enable-fine-tuning			-- default: disabled; if page detection enabled it moves edges while corners are in black
+	--force-disable-page-detection		-- switch page detection from page project off if enabled and set content detection to manual mode
+	--disable-content-text-mask
+						-- disable using text mask to estimate a content box
+	--content-detection=<cautious|normal|aggressive>
+						-- default: normal
+	--content-deviation=<0.0...)		-- default: 1.0; pages with bigger content deviation will be painted in red
+	--content-box=<<left_offset>x<top_offset>:<width>x<height>>
+						-- if set the content detection is se to manual mode
+						   example: --content-box=100x100:1500x2500
+	--enable-auto-margins			-- sets the margins to original ones (based on detected page or image size)
+	--margins=<number>			-- sets left, top, right and bottom margins to same number.
+		--margins-left=<number>
+		--margins-right=<number>
+		--margins-top=<number>
+		--margins-bottom=<number>
+	--default-margins=<number>			-- sets left, top, right and bottom margins, for new pages, to same number.
+		--default-margins-left=<number>
+		--default-margins-right=<number>
+		--default-margins-top=<number>
+		--default-margins-bottom=<number>
+	--match-layout=<true|false>		-- default: true
+	--match-layout-tolerance=<0.0...)	-- default: off
+	--match-layout-default=<true|false>	-- default: true
+	--alignment=<center|original|auto>	-- sets vertical to original and horizontal to center
+		--alignment-vertical=<top|center|bottom|original>
+		--alignment-horizontal=<left|center|right|original>
+	--alignment-tolerance=<float>		-- sets tolerance for auto alignment
+	--dpi=<number>				-- sets x and y dpi. default: 600
+		--dpi-x=<number>
+		--dpi-y=<number>
+	--output-dpi=<number>			-- sets x and y output dpi. default: 600
+		--output-dpi-x=<number>
+		--output-dpi-y=<number>
+	--default-output-dpi=<number>		-- default output dpi for pages created by split filter in gui
+	--color-mode=<black_and_white|color_grayscale|mixed>
+						-- default: black_and_white
+	--default-color-mode=<...>		-- sets default value for new images created by split filter
+	--picture-shape=<free|rectangular>
+						-- default: free
+	--white-margins				-- default: false
+	--normalize-illumination		-- default: false
+	--threshold=<n>				-- n<0 thinner, n>0 thicker; default: 0
+	--despeckle=<off|cautious|normal|aggressive>
+						-- default: normal
+	--dewarping=<off|auto>			-- default: off
+	--depth-perception=<1.0...3.0>		-- default: 2.0
+	--start-filter=<1...6>			-- default: 4
+	--end-filter=<1...6>			-- default: 6
+	--output-project=, -o=<project_name>
+	--tiff-compression=<lzw|deflate|packbits|jpeg|none>	-- default: lzw
+	--tiff-force-rgb			-- all output tiffs will be rgb
+	--tiff-force-grayscale			-- all output tiffs will be grayscale
+	--tiff-force-keep-color-space		-- output tiffs will be in original color space
+	--window-title=WindowTitle		-- default: project name
+	--page-detection-box=<widthxheight>		-- in mm
+		--page-detection-tolerance=<0.0..1.0>	-- default: 0.1
+	--disable-check-output			-- don't check if page is valid when switching to step 6

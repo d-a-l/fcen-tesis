@@ -1,0 +1,77 @@
+#!/bin/bash
+
+#...............................
+# change these two parameters as appropriate to 
+# your image directory and IM path to convert
+process="process"
+if [ "$1" != "" ]
+then
+  process="$1"
+fi
+imagedir="$(pwd)"		# provide full path
+path2convert="/usr/bin"			# change as appropriate
+#...............................
+
+
+
+# test if imagedir exists
+# test if imagedir exists
+[ -d $imagedir ] || { 
+echo  "ERROR: --- Directory $imagedir DOES NOT EXIST ---"
+exit 1 
+}
+
+# create output directory
+outdir="${imagedir}/${process}"
+[ -d $outdir ] || mkdir -p $outdir
+
+# change directories to image directory and get list of jpg and tif image files
+# if filename has spaces, then replace with +, so filename not put as two 
+# files in array.
+cd "$imagedir"
+imgArr1=(`ls | grep -i '.jpg' | tr " " "+"`)
+imgArr2=(`ls | grep -i '.tif' | tr " " "+"`)
+imgArr3=(`ls | grep -i '.tiff' | tr " " "+"`)
+imgArr=(${imgArr1[*]} ${imgArr2[*]} ${imgArr3[*]})
+imgcount=${#imgArr[*]}
+
+echo ""
+echo "Processing $imgcount Files"
+echo ""
+
+
+# loop over each image file
+for infile in ${imgArr[*]}; do
+
+	# replace + in filename back to space for input and underscore for output
+	inname=`convert $infile -ping -format "%t" info:`
+	suffix=`convert $infile -ping -format "%e" info:`
+	outfile="${inname}_edited.$suffix"
+	outfile=`echo "$outfile" | tr "+" "_"`
+	infile=`echo "$infile" | tr "+" " "`
+
+	echo "Processing File: $infile"
+
+	
+	${path2convert}/convert $infile \
+	\( -clone 0 -blur 0x90 \) \
+	\( -clone 0 -clone 1 +swap -compose mathematics \
+	-set option:compose:args "0,1,-1,0.5" -composite \
+	-matte -channel A -evaluate set 90% +channel \) \
+	\( -clone 0 -blur 0x3 \) \
+	\( -clone 0 -clone 3 +swap -compose mathematics \
+	-set option:compose:args "0,1,-1,0.5" -composite \
+	-matte -channel A -evaluate set 50% +channel \) \
+	\( -clone 0 -clone 2 -compose hardlight -composite \
+	-clone 4 -compose overlay -composite \) \
+	-delete 0-4 ./${process}/$outfile
+
+done
+echo ""
+exit 0
+
+
+	
+	
+	
+	

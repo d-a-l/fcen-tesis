@@ -1,0 +1,6 @@
+WORKING_FOLDER="" # .scantailor
+PDF_NAME=""
+
+cd $WORKING_FOLDER
+CMD_PDFBEADS="pdfbeads -b JP2 *.tif > ../$PDF_NAME.pdf"
+time eval $CMD_PDFBEADS
