@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# cp ./scripts/fcen-thumbtable ~/bin/fcen-thumbtable
-# chmod a+x ~/bin/fcen-thumbtable
-# 
-# cp ./scripts/fcen-postprocessing ~/bin/fcen-postprocessing
-# chmod a+x ~/bin/fcen-postprocessing
-# 
-# mkdir ~/bin/filters 
-# cp filters
+cp ./scripts/fcen-thumbtable ~/bin
+chmod a+x ~/bin/fcen-thumbtable
 
+cp ./scripts/fcen-postprocessing ~/bin
+chmod a+x ~/bin/fcen-postprocessing
+
+cp -r ./scripts/filters ~/bin/
+
+exit 0
