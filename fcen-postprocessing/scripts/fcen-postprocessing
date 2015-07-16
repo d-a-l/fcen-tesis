@@ -1,109 +1,237 @@
 #!/bin/bash
 
-inicio_ns=`date +%s%N`
-inicio=`date +%s`
+tt=`date +%s` # inicio_ns=`date +%s%N`
 
-WORKING_DIR=working
-OUT_FILE_NAME="out_pdfbeads_tesseract.pdf"
-SCANTAILOR_MODE=1
-SCANTAILOR_ARGS="--disable-content-detection --enable-page-detection --enable-fine-tuning  --margins=0"
-SCANTAILOR_THRESHOLD="--threshold=0"
-SCANTAILOR_SOURCE_DIR=""
-TESSERACT_ARGS=""
-HPASS_PROC=hpass
+# ej: fcen-postprocessing src=/path/to/tifs wrk=/path/to/out default
 
-echo ""
+# ------
+
+# Paths to executables
+
+ SE_BIN="/opt/src/scantailor-enhanced/scantailor-cli"
+ FILTER_DIR="~/bin/filters"
+
+# Default values 
+
+ # Working folders
+ WORKING_BASE="$(pwd)"
+ SCANTAILOR_SOURCE_DIR="$(pwd)"
+ PROC_DIR=".processing"
+ HPASS_DIR=".hpass"
+
+ # Scantailor 
+ SCANTAILOR_LMODE="-l=1"     # Scantailor layout mode
+ SCANTAILOR_CMODE=""         # Scantailor color mode arguments
+ SCANTAILOR_SEGM=""          # Scantailor detect page/content arguments
+ SCANTAILOR_THRESHOLD="--threshold=0"  # Scantailor threshold arguments
+
+ # Tesseract
+ TESSERACT_ARGS=""
+
+ # PDFbeads
+ PDFBEADS_ARGS="-b JPEG"      # jpeg2 "-b JP2"
+
+# Process arguments
 
 while [ $# -ne 0 ]
 do
     arg="$1"
     case "$arg" in
-        cut)
-            SCANTAILOR_MODE="1.5"
-            echo "mode: cut"
+        src=*)
+            SCANTAILOR_SOURCE_DIR="${arg#*=}"
             ;;
-        enhaced)
-            SCANTAILOR_ARGS="--content-detection=aggressive --margins=5 --despeckle=aggressive"
-            echo "mode: enhaced"
+        wrk=*)
+            WORKING_BASE="${arg#*=}"
+            [[ -z "$OUT_PDF_DIR" ]] && OUT_PDF_DIR="${WORKING_BASE}"
+            [[ -z "$OUT_LOGS_DIR" ]] && OUT_LOGS_DIR="${WORKING_BASE}"
             ;;
-        bolder)
+        log=*)
+            OUT_LOGS_DIR="${arg#*=}"
+            ;;
+        out=*)
+            OUT_PDF_DIR="${arg#*=}"
+            ;;
+        layout-oneandhalf)
+            M="${M}layout-oneandhalf "
+            SCANTAILOR_LMODE="1.5"
+            ;;
+        default)
+            M="${M}default "
+            SCANTAILOR_SEGM="--disable-content-detection --enable-page-detection --enable-fine-tuning --margins=0"
+            SCANTAILOR_CMODE="--picture-shape=rectangular --color-mode=mixed"
+            ;;
+        content-detection)
+            M="${M}content-detection "
+            SCANTAILOR_SEGM="--content-detection=aggressive --margins=5 --despeckle=aggressive"
+            ;;
+        bolder-text)
+            M="${M}bolder-text "
             SCANTAILOR_THRESHOLD="--threshold=5"
-            echo "mode: bolder"
             ;;
-        justified)
+        only-text-justified)
+            M="${M}only-text-justified "
             TESSERACT_ARGS="-psm 6"
-            echo "mode: justified"
             ;;
-        hpass)
-            SCANTAILOR_SOURCE_DIR=${HPASS_PROC}/
-            echo -e "mode: hpass\n"
-            echo -e "\n0. high pass filter"
-            echo -e   "===================\n"
-            time hpass $HPASS_PROC
+        hpass-prefilter)
+            M="${M}hpass-prefilter "
+            HPASS_FILTER=1
+            ;;
+        quiet)
+            QUIET=1
             ;;
         clear)
-	    if [ -d "$WORKING_DIR" ]; then
-	       rm -R $WORKING_DIR
-	    fi
-	    if [ -f "$OUT_FILE_NAME" ]; then
-	       rm $OUT_FILE_NAME
-	    fi
-	    if [ -f "log" ]; then
-	       rm log
-	    fi
-	    if [ -d "$HPASS_PROC" ]; then
-	       rm -r $HPASS_PROC
-	    fi
-	    exit 0
+            CLEAR=1
             ;;
         *)
-            NOARGS="true"
+            NOARGS=1
             ;;
     esac
     shift
 done
 
-if [ ! -d "$WORKING_DIR" ]
-then 
-   mkdir $WORKING_DIR
+# PDF out file
+[[ -z "$OUT_PDF_DIR" ]] && OUT_PDF_DIR="${WORKING_BASE}"
+OUT_PDF_NAME="tesis.pdf"
+
+# Log paths
+[[ -z "$OUT_LOGS_DIR" ]] && OUT_LOGS_DIR="${WORKING_BASE}"
+OCR_ERROR_PATH="${OUT_LOGS_DIR}/OCR_ERROR"
+SCT_ERROR_PATH="${OUT_LOGS_DIR}/SCANTAILOR_ERROR"
+STATS_PATH="${OUT_LOGS_DIR}/STATS"
+LOG_PATH="${OUT_LOGS_DIR}/LOG"
+
+if [ $CLEAR -eq 1 ]
+ then
+  # ==== CLEAR & EXIT =====
+  echo
+  for p in "$WORKING_BASE/$PROC_DIR" "$WORKING_BASE/$HPASS_DIR"
+  do
+    [[ -d "$p" ]] && { echo " [!] clear $p"; rm -fR "$p" || exit 0; }
+  done
+  # clear files:
+  for f in "$OUT_PDF_DIR/$OUT_PDF_NAME" \
+    "$OCR_ERROR_PATH" \
+    "$LOG_PATH" \
+    "$STATS_PATH" \
+    "$SCT_ERROR_PATH"
+  do
+    [[ -f "$f" ]] && { echo " [!] clear $f"; rm -f "$f" || exit 0; }
+  done
+  echo -e "\nclear OK, exit...\n"
+  exit 0
 fi
 
-echo -e "\n\n1. scantailor"
-echo -e   "=============\n"
 
-CMD_SCANTAILOR="scantailor-cli -l=$SCANTAILOR_MODE $SCANTAILOR_ARGS $SCANTAILOR_THRESHOLD ${SCANTAILOR_SOURCE_DIR}*.tif $WORKING_DIR/"
+# check folders
+[[ -d "$WORKING_BASE" ]] || { mkdir "$WORKING_BASE" || exit 0; }
+[[ -d "$WORKING_BASE/$PROC_DIR" ]] || { mkdir "$WORKING_BASE/$PROC_DIR" || exit 0; }
+[[ -d "$OUT_LOGS_DIR" ]] || { echo "[ERROR] no existe $OUT_LOGS_DIR"; exit 0;}
 
-echo "ejecutando: $CMD_SCANTAILOR" 
+# ===============
 
-time eval $CMD_SCANTAILOR
+if [ $QUIET -eq 1 ]
+ then
+  exec 3>&1
+  exec > $LOG_PATH
+fi
 
-echo -e "\n2. tesseract"
-echo -e "============\n"
+echo "
+[INFO] Mode[s]: $M
+[INFO] Source dir: $SCANTAILOR_SOURCE_DIR
 
-cd $WORKING_DIR/
+[INFO] Working base dir: $WORKING_BASE
+[INFO] Process folder:   $WORKING_BASE/$PROC_DIR
+[INFO] Hpass folder:     $WORKING_BASE/$HPASS_DIR
 
+[INFO] PDF file path: $OUT_PDF_DIR/$OUT_PDF_NAME
+[INFO] Logs dir: $OUT_LOGS_DIR
+
+"
+
+#exit 0
+# ---------------
+
+if [ "HPASS_FILTER" != ""]
+ then
+  SCANTAILOR_SOURCE_DIR="$WORKING_BASE/$HPASS_DIR"
+  echo; echo "======== PREFILTER HIGHPASS ========"; echo
+  # t=`date +%s`
+  # ${FILTER_DIR}/hpass "$WORKING_BASE/$HPASS_DIR"
+  # HpassTime=$(expr `date +%s` - $t)
+fi
+
+echo; echo "============ SCANTAILOR ============"; echo
+
+CMD_SCANTAILOR="$SE_BIN -v $SCANTAILOR_LMODE $SCANTAILOR_SEGM $SCANTAILOR_THRESHOLD $SCANTAILOR_CMODE ${SCANTAILOR_SOURCE_DIR}/*.tif $WORKING_BASE/$PROC_DIR/ 2> $SCT_ERROR_PATH"
+
+echo "[CMD]:"; echo "$CMD_SCANTAILOR"; echo
+
+t=`date +%s`
+eval $CMD_SCANTAILOR
+ScantailorTime=$(expr `date +%s` - $t)
+
+echo; echo "============ TESSERACT ============="; echo
+
+cd $WORKING_BASE/$PROC_DIR/
+
+t=`date +%s`; c=0
 for i in *tif
 do 
-   CMD_TESSERACT="tesseract $i `basename $i .tif` -l spa $TESSERACT_ARGS hocr"
-   echo -e "\n== procesando $i ==";
-   echo "ejecutando: $CMD_TESSERACT"
-   time eval $CMD_TESSERACT
+   let c=c+1 
+   CMD_TESSERACT="tesseract $i `basename $i .tif` -l spa $TESSERACT_ARGS hocr 2>&1"
+
+   echo "[CMD $c]:"; echo "$CMD_TESSERACT"
+
+   d=`date +%s`; out=$(eval $CMD_TESSERACT)
+   if [ "$out" != "Tesseract Open Source OCR Engine v3.03 with Leptonica" ]
+    then
+     echo "$out"
+     echo "Page $c [$(date +%Y-%m-%d\ %T)]:" >> $OCR_ERROR_PATH
+     echo "$out" >> $OCR_ERROR_PATH
+   fi
+   echo Time: $(expr `date +%s` - $d)s; echo
 done
 
-echo -e "\n3. pdfbeads"
-echo -e   "===========\n"
+TesseractTime=$(expr `date +%s` - $t)
+NumberOfPages=$c
 
-CMD_PDFBEADS="pdfbeads -b JP2 *.tif > ../$OUT_FILE_NAME"
-echo "ejecutando: $CMD_PDFBEADS"
-time eval $CMD_PDFBEADS
 
-fin_ns=`date +%s%N`
-fin=`date +%s`
+echo; echo "============ PDFBEADS =============="; echo
 
-let total_ns=$fin_ns-$inicio_ns
-let total=$fin-$inicio
+CMD_PDFBEADS="pdfbeads $PDFBEADS_ARGS *.tif > $OUT_PDF_DIR/$OUT_PDF_NAME"
 
-echo -e "\n\ntiempo total: ${total}s [$total_ns nanoseg] \n"
+echo "[CMD]:"; echo "$CMD_PDFBEADS"; echo
 
+t=`date +%s`
+eval $CMD_PDFBEADS 2>&1
+PdfbeadsTime=$(expr `date +%s` - $t)
+
+# ------
+
+
+TotalTime=$(expr `date +%s` - $tt)
+AverageTime=$(expr $TotalTime / $NumberOfPages)
+
+echo "
+# Document info
+
+NumberOfPages:  $NumberOfPages
+
+# Execution time (in seconds, integer values):
+
+ScantailorTime: $ScantailorTime
+TesseractTime:  $TesseractTime
+PdfbeadsTime:   $PdfbeadsTime
+TotalTime:      $TotalTime
+
+AverageTime:    $AverageTime    
+
+" > $STATS_PATH
+
+# Remove empty log files
+{ [[ -f "$OCR_ERROR_PATH" ]] && [[ ! -s "$OCR_ERROR_PATH" ]]; } && rm "$OCR_ERROR_PATH"
+{ [[ -f "$SCT_ERROR_PATH" ]] && [[ ! -s "$SCT_ERROR_PATH" ]]; } && rm "$SCT_ERROR_PATH"
+
+echo ""
 
 # https://addons.mozilla.org/es/firefox/addon/hocr-editor/
