@@ -151,7 +151,7 @@ echo "
 #exit 0
 # ---------------
 
-if [ "HPASS_FILTER" != ""]
+if [ $HPASS_FILTER -eq 1 ]
  then
   SCANTAILOR_SOURCE_DIR="$WORKING_BASE/$HPASS_DIR"
   echo; echo "======== PREFILTER HIGHPASS ========"; echo

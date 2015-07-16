@@ -1,0 +1,26 @@
+#!/bin/bash
+
+process() {
+
+   echo "$1"
+   local source="/srv/TesisDigitalizadas/$1"
+   local work="/srv/TEST/$1"
+   [[ -d "$work" ]] || mkdir $work;
+   fcen-thumbtable "$source" "$work"
+   fcen-postprocessing "$source" "$work" default
+
+}
+
+process "Tesis_4672_Desbats"
+
+exit 0 
+
+process "Tesis_4691_Salvia"
+process "Tesis_4911_Mondotte"
+process "Tesis_4935_Grunhut"
+process "Tesis_4964_Mantinian"
+process "Tesis_5089_Rossi"
+process "Tesis_5104_Negri"
+process "Tesis_5118_Chiappini"
+process "Tesis_5140_Fachinetti"
+
