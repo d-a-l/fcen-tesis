@@ -7,7 +7,7 @@ process() {
    local work="/srv/TEST/$1"
    [[ -d "$work" ]] || mkdir $work;
    fcen-thumbtable "$source" "$work"
-   fcen-postprocessing "$source" "$work" default
+   fcen-postprocessing "src=$source" "wrk=$work" default
 
 }
 
