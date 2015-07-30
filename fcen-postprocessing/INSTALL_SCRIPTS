@@ -1,11 +1,20 @@
 #!/bin/bash
 
-cp ./scripts/fcen-thumbtable ~/bin
-chmod a+x ~/bin/fcen-thumbtable
+thispath=$(dirname "$0")
 
-cp ./scripts/fcen-postprocessing ~/bin
-chmod a+x ~/bin/fcen-postprocessing
+cp -v $thispath/scripts/fcen-thumbtable ~/bin
+chmod -v a+x ~/bin/fcen-thumbtable
+echo ""
 
-cp -r ./scripts/filters ~/bin/
+cp $thispath/scripts/fcen-postprocessing ~/bin
+chmod -v a+x ~/bin/fcen-postprocessing
+echo ""
+
+cp $thispath/scripts/utils/batch_process ~/bin/fcen-batch_process
+chmod -v a+x ~/bin/fcen-batch_process
+echo ""
+
+cp -rv $thispath/scripts/filters ~/bin/
+echo ""
 
 exit 0
