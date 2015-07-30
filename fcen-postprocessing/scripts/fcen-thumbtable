@@ -17,7 +17,7 @@ fi
 [[ -d "$SOURCE" ]] || { echo " error: $SOURCE no es un directorio"; exit 0; }
 [[ -d "$DEST" ]] || { echo "error: $DEST no es un directorio"; exit 0; }
 [[ -d "$DEST/.econvert_thumbnails" ]] || \
-   mkdir $DEST/.econvert_thumbnails || \
+   mkdir "$DEST"/.econvert_thumbnails || \
    { echo "error: mkdir no pudo crear un directorio temporal en $DEST"; \
      exit 0; }
 
@@ -27,18 +27,21 @@ echo -e "\n Iniciando $0 \n SOURCE = $SOURCE \n DEST = $DEST \n"
 #exit 0
 
 n=0
-cd $SOURCE
+cd "$SOURCE"
 for i in *tif
 do 
    #n=$(( n+1 ))
-   CMD_ECONVERT="econvert -i $i --thumbnail 0.0833 -o $DEST/.econvert_thumbnails/`basename $i .tif`.jpg"
-   echo "ejecutando: $CMD_ECONVERT"
+   tname=$(basename "${i// /_}" .tif)
+   CMD_ECONVERT='econvert -i "$i" --thumbnail 0.0833 -o "$DEST/.econvert_thumbnails/$tname.jpg"'
+   echo "ejecutando:" $(eval "echo $CMD_ECONVERT")
    echo
    eval $CMD_ECONVERT
 done
 
-CMD_MONTAGE="montage $DEST/.econvert_thumbnails/*.jpg -tile 5x -geometry +2+2  -gravity east -pointsize 9 -set label '%f' -background lightblue $DEST/tile.jpg"
-   echo "ejecutando: $CMD_MONTAGE"
+setlabel="-set label '%f'" # problemas con comillas
+montageFiles=("$DEST"/.econvert_thumbnails/*.jpg)
+CMD_MONTAGE='montage "${montageFiles[@]}" -tile 5x -geometry +2+2  -gravity east -pointsize 9 $setlabel -background lightblue "$DEST"/tile.jpg'
+   echo "ejecutando:" $(eval "echo $CMD_MONTAGE")
    eval $CMD_MONTAGE
 
 # rm $DEST/.econvert_thumbnails/*.tif
