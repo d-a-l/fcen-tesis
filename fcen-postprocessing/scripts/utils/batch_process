@@ -1,26 +1,22 @@
 #!/bin/bash
 
+FILE_LIST="$1"
+[[ -f "$FILE_LIST" ]] || { echo " error: $FILE_LIST no existe"; exit 0; }
+
+echo "Procesando ${FILE_LIST}..."
+
 process() {
 
-   echo "$1"
-   local source="/srv/TesisDigitalizadas/$1"
-   local work="/srv/TEST/$1"
-   [[ -d "$work" ]] || mkdir $work;
+   local sPath="$1"
+   echo "$sPath"
+   local source="/srv/TesisDigitalizadas/$sPath" #production
+   # local source="/srv/jp/source_test/$sPath" #testing
+   local work="/srv/OCR/TEST/${sPath// /_}"
+   [[ -d "$work" ]] || mkdir "$work";
    fcen-thumbtable "$source" "$work"
-   fcen-postprocessing "src=$source" "wrk=$work" default
+   fcen-postprocessing "src=$source" "wrk=$work" default quiet
 
 }
 
-process "Tesis_4672_Desbats"
-
-exit 0 
-
-process "Tesis_4691_Salvia"
-process "Tesis_4911_Mondotte"
-process "Tesis_4935_Grunhut"
-process "Tesis_4964_Mantinian"
-process "Tesis_5089_Rossi"
-process "Tesis_5104_Negri"
-process "Tesis_5118_Chiappini"
-process "Tesis_5140_Fachinetti"
+source "$FILE_LIST"
 
