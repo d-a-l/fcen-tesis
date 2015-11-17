@@ -1,7 +1,7 @@
 #!/bin/bash
 
 tt=`date +%s` # inicio_ns=`date +%s%N`
-
+me=`basename "$0"`
 # ej: fcen-postprocessing src=/path/to/tifs wrk=/path/to/out default
 
 # ------
@@ -80,9 +80,6 @@ do
             M="${M}hpass-prefilter "
             HPASS_FILTER="Yes"
             ;;
-        quiet)
-            QUIET="Yes"
-            ;;
         clear)
             CLEAR="Yes"
             ;;
@@ -135,38 +132,32 @@ fi
 
 # ===============
 
-if [ "$QUIET" == "Yes" ]
- then
-  exec 3>&1
-  # exec > "$LOG_PATH"
-  exec > >(tee -a "$LOG_PATH")
-fi
+#  exec > "$LOG_PATH" # stdout to logfile
+#  exec > >(tee -a "$LOG_PATH") # stdout to term & logfile (default)
+echo "[$me] $(date +%Y-%m-%d\ %T)"
+echo "Mode[s]: $M" 
 
-echo "
-[INFO] Mode[s]: $M
-[INFO] Source dir: $SCANTAILOR_SOURCE_DIR
-
-[INFO] Working base dir: $WORKING_BASE
-[INFO] Process folder:   $WORKING_BASE/$PROC_DIR
-[INFO] Hpass folder:     $WORKING_BASE/$HPASS_DIR
-
-[INFO] PDF file path: $OUT_PDF_DIR/$OUT_PDF_NAME
-[INFO] Logs dir: $OUT_LOGS_DIR
-
-"
+( printf "=============== INFO ===============\n"
+printf " Mode[s]: $M\n"
+printf " Source dir: $SCANTAILOR_SOURCE_DIR\n"
+printf " Working base dir: $WORKING_BASE\n"
+printf " Process folder:   $WORKING_BASE/$PROC_DIR\n"
+printf " Hpass folder:     $WORKING_BASE/$HPASS_DIR\n"
+printf " PDF file path: $OUT_PDF_DIR/$OUT_PDF_NAME\n"
+printf " Logs dir: $OUT_LOGS_DIR\n" ) >> "$LOG_PATH"
 
 # ---------------
 
 if [ "$HPASS_FILTER" == "Yes" ]
  then
   SCANTAILOR_SOURCE_DIR="$WORKING_BASE/$HPASS_DIR"
-  echo; echo "======== PREFILTER HIGHPASS ========"; echo
+  printf "\n======== PREFILTER HIGHPASS ========\n" >> "$LOG_PATH"
   # t=`date +%s`
   # ${FILTER_DIR}/hpass "$WORKING_BASE/$HPASS_DIR"
   # HpassTime=$(expr `date +%s` - $t)
 fi
 
-echo; echo "============ SCANTAILOR ============"; echo
+printf "\n============ SCANTAILOR ============\n" >> "$LOG_PATH"
 
 cd "$SCANTAILOR_SOURCE_DIR"
 
@@ -174,43 +165,54 @@ shopt -s nullglob;
 stFiles=($EXT); 
 shopt -u nullglob;
 
-if [ -z $stFiles ] ; then echo "ERROR: no hay archivos para procesar en $SCANTAILOR_SOURCE_DIR"; exit 0; fi
+if [ -z $stFiles ] ; then echo "ERROR: no hay archivos para procesar en $SCANTAILOR_SOURCE_DIR" | tee -a "$LOG_PATH"; exit 0; fi
 
 #echo; echo "${stFiles[@]}"; echo
 
 CMD_SCANTAILOR='"$SE_BIN" -v $SCANTAILOR_LMODE $SCANTAILOR_SEGM $SCANTAILOR_THRESHOLD $SCANTAILOR_CMODE "${stFiles[@]}" "$WORKING_BASE/$PROC_DIR/"'
 
-echo "[CMD]:"; echo $(eval "echo $CMD_SCANTAILOR"); echo
-#echo "[CMD]:"; echo "$CMD_SCANTAILOR"; echo
+printf "[CMD]:\n"$(eval "echo $CMD_SCANTAILOR")"\n" > "$LOG_PATH"
 
 t=`date +%s`
-eval $CMD_SCANTAILOR 2> "$SCT_ERROR_PATH"
-ScantailorTime=$(expr `date +%s` - $t)
+
+echo -n "Scantailor processing"
+eval $CMD_SCANTAILOR > >(tee -a "$LOG_PATH") 2> >(tee "$SCT_ERROR_PATH" >&2) | awk '{ printf "." }'; echo -n "done"
+
+ScantailorTime=$(expr `date +%s` - $t); echo -n " - ${ScantailorTime}s";
+
+{ [[ -f "$SCT_ERROR_PATH" ]] && [[ ! -s "$SCT_ERROR_PATH" ]]; } && { rm "$SCT_ERROR_PATH"; echo -n " - No errors";}
+echo
 
 # ============================================================
 
 # set current dir to Tesseract and Pdfbeads
 cd "$WORKING_BASE/$PROC_DIR/"
 
-echo; echo "============ RENAMING ============="; echo
+printf "\n============ RENAMING =============\n" >> "$LOG_PATH"
 
 # renaming paths with spaces (pdfbeads bug)
 # note: scantailor output filetype always ".tif" (?)
+
+echo -n "Renaming"
 
 for fr in *.tif
 do
   if [[ $fr == *\ * ]]
    then
+    RENAMING="Yes"
     frWithoutSpaces=${fr// /_}
-    echo " Renaming: $fr"
-    echo "       to: $frWithoutSpaces"
-    echo " Renaming: $fr to $frWithoutSpaces" >> "$RENAMED_PATH"
+    printf " Renaming: $fr to $frWithoutSpaces\n" | tee -a "$LOG_PATH" >> "$RENAMED_PATH"
+    echo -n "."
     mv -- "$fr" "$frWithoutSpaces"
        # (Los guiones previenen error de nombres de archivos que empiezan con guión)
   fi
 done
 
-echo; echo "============ TESSERACT ============="; echo
+if [ "$RENAMING" == "Yes" ]; then echo "done"; else echo " - no file had to be renamed"; fi
+
+printf "\n============ TESSERACT =============\n" >> "$LOG_PATH"
+
+echo -n "Tesseract processing"
 
 t=`date +%s`; c=0
 for i in *.tif
@@ -218,25 +220,29 @@ do
    let c=c+1 
    CMD_TESSERACT='tesseract "$i" "`basename "$i" .tif`" -l spa $TESSERACT_ARGS hocr 2>&1'
 
-   echo "[CMD $c]:"; echo $(eval "echo $CMD_TESSERACT"); echo
-   
+   echo -n "." 
+   printf "[CMD $c]:\n"$(eval "echo $CMD_TESSERACT")"\n" >> "$LOG_PATH";
+
    d=`date +%s`; 
    out=$(eval $CMD_TESSERACT)
-   
+
+   printf "Time: "$(expr `date +%s` - $d)"s\n" >> "$LOG_PATH"
+
    if [ "$out" != "Tesseract Open Source OCR Engine v3.03 with Leptonica" ]
     then
-     echo "$out"
-     echo "Page $c [$(date +%Y-%m-%d\ %T)]:" >> "$OCR_ERROR_PATH"
-     echo "$out" >> "$OCR_ERROR_PATH"
+     printf "$out\n" >> "$LOG_PATH"
+     echo -n "!"
+     printf "Page $c ["$(date +%Y-%m-%d\ %T)"]:\n$out" >> "$OCR_ERROR_PATH"
    fi
-   echo Time: $(expr `date +%s` - $d)s; echo
 done
-
-TesseractTime=$(expr `date +%s` - $t)
+echo -n "done"
+TesseractTime=$(expr `date +%s` - $t); echo -n " - ${TesseractTime}s - $c pages";
 NumberOfPages=$c
 
+{ [[ -f "$OCR_ERROR_PATH" ]] && [[ ! -s "$OCR_ERROR_PATH" ]]; } && { rm "$OCR_ERROR_PATH"; echo -n "No errors" ;}
+echo
 
-echo; echo "============ PDFBEADS =============="; echo
+printf "\n============ PDFBEADS ==============\n" >> "$LOG_PATH"
 
 # note: pdfbeads bugs -> http://ssdigit.nothingisreal.com/2012/09/experiences-with-pdfbeads.html
 
@@ -248,39 +254,30 @@ echo; echo "============ PDFBEADS =============="; echo
 
 t=`date +%s`
 
-# eval $CMD_PDFBEADS 2>&1
+# eval $CMD_PDFBEADS 2>&1 
 
-echo "[CMD]:"; echo "pdfbeads $PDFBEADS_ARGS *.tif > $OUT_PDF_DIR/$OUT_PDF_NAME"; echo
-pdfbeads $PDFBEADS_ARGS *.tif > "$OUT_PDF_DIR/$OUT_PDF_NAME"  2>&1
-PdfbeadsTime=$(expr `date +%s` - $t)
+printf "[CMD]:\npdfbeads $PDFBEADS_ARGS *.tif > $OUT_PDF_DIR/$OUT_PDF_NAME\n" >> "$LOG_PATH"
+echo -n "PDFbeads processing"
+(pdfbeads $PDFBEADS_ARGS *.tif >"$OUT_PDF_DIR/$OUT_PDF_NAME" 2> >(tee -a "$LOG_PATH" >&2)) 2>&1 | awk '{ printf "." }'
+echo -n "done"
+PdfbeadsTime=$(expr `date +%s` - $t); echo " - ${PdfbeadsTime}s";
 
 # ------
 
 
-TotalTime=$(expr `date +%s` - $tt)
+TotalTime=$(expr `date +%s` - $tt); echo "Total Time: ${TotalTime}s | Number of pages: $NumberOfPages";
 AverageTime=$(expr $TotalTime / $NumberOfPages)
 
-echo "
-# Document info
+( printf "# Document info\n\n"
+printf "NumberOfPages:  $NumberOfPages\n\n"
+printf "# Execution time (in seconds, integer values):\n\n"
+printf "ScantailorTime: $ScantailorTime\n"
+printf "TesseractTime:  $TesseractTime\n"
+printf "PdfbeadsTime:   $PdfbeadsTime\n"
+printf "TotalTime:      $TotalTime\n"
+printf "AverageTime:    $AverageTime\n" ) | tee "$STATS_PATH" >> "$LOG_PATH"
 
-NumberOfPages:  $NumberOfPages
 
-# Execution time (in seconds, integer values):
-
-ScantailorTime: $ScantailorTime
-TesseractTime:  $TesseractTime
-PdfbeadsTime:   $PdfbeadsTime
-TotalTime:      $TotalTime
-
-AverageTime:    $AverageTime    
-
-" > "$STATS_PATH"
-
-# Remove empty log files
-{ [[ -f "$OCR_ERROR_PATH" ]] && [[ ! -s "$OCR_ERROR_PATH" ]]; } && rm "$OCR_ERROR_PATH"
-{ [[ -f "$SCT_ERROR_PATH" ]] && [[ ! -s "$SCT_ERROR_PATH" ]]; } && rm "$SCT_ERROR_PATH"
-
-echo ""
 # # [[ $str == *['!'@#\$%^\&*()_+]* ]]
 
 # https://addons.mozilla.org/es/firefox/addon/hocr-editor/

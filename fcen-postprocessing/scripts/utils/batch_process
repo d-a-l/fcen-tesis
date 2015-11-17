@@ -1,22 +1,85 @@
 #!/bin/bash
 
-FILE_LIST="$1"
-[[ -f "$FILE_LIST" ]] || { echo " error: $FILE_LIST no existe"; exit 0; }
+#FILE_LIST="$1"
+#[[ -f "$FILE_LIST" ]] || { echo " error: $FILE_LIST no existe"; exit 0; }
 
-echo "Procesando ${FILE_LIST}..."
+#echo "Procesando ${FILE_LIST}..."
+
+workDir="/srv/OCR/.batchprocessing"
+[[ -d "$workDir" ]] || { echo "error: $workDir does not exist"; exit 0; }
+
+queueDir="$workDir/queued"
+[[ -d "$queueDir" ]] || mkdir $queueDir || exit 0;
+
+processedDir="$workDir/processed"
+[[ -d "$processedDir" ]] || mkdir $processedDir || exit 0;
+
+logDir="$workDir/log"
+[[ -d "$logDir" ]] || mkdir $logDir || exit 0;
+
+logFile="$logDir/batch_process-$(date +%Y-%m-%d_%H-%M-%S)"
+
+exec > >(tee -a "$logFile") # stdout to term & logfile 
+
+# ------------
 
 process() {
 
    local sPath="$1"
-   echo "$sPath"
+   local opt="$2"
+   local sParam="$3"
+     
    local source="/srv/TesisDigitalizadas/$sPath" #production
    # local source="/srv/jp/source_test/$sPath" #testing
    local work="/srv/OCR/TEST/${sPath// /_}"
-   [[ -d "$work" ]] || mkdir "$work";
-   fcen-thumbtable "$source" "$work"
-   fcen-postprocessing "src=$source" "wrk=$work" default quiet
 
+   echo "Tesis: $sPath"
+   echo "Option: $opt | Param: $sParam"
+   echo "Source path: $source"
+   echo "Working path: $work"
+   echo
+   
+   [[ -d "$work" ]] || mkdir "$work";
+
+   if [ "$opt" != "no-thumbs" ]
+    then
+     fcen-thumbtable "$source" "$work" 
+     echo
+   fi
+   
+   if [ -z "$sParam" ]
+    then
+     sParam="default"
+   fi
+   #fcen-postprocessing "src=$source" "wrk=$work" $sParam
+   fcen-postprocessing "src=$source" "wrk=$work" $sParam
+   echo
 }
 
-source "$FILE_LIST"
+
+# ------------
+
+# source "$FILE_LIST"
+
+echo "queueDir: $queueDir"
+echo "processedDir: $processedDir"
+echo "logFile: $logFile"
+
+while f=$( ls -rp $queueDir | grep -v / | tail -n 1 ) && [[ ! -z $f ]]
+ do
+   [[ -f "$queueDir/$f" ]] || { echo " error: $queueDir/$f no es un archivo"; exit 0; }
+   echo
+   echo "====== Processing queued file '$f' ======"
+   echo
+
+   while read tesis options param
+    do
+      echo "======="; echo 
+      echo "Queued: $f"
+      process "$tesis" "$options" "$param"
+    done < "$queueDir/$f"
+
+   mv "$queueDir/$f" "$processedDir/$f"
+   sleep 1
+done
 
