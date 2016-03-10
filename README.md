@@ -1,15 +1,16 @@
-# fcen-tesis
+fcen-tesis
+----------
 
-#### Entorno de software utilizado
+*Entorno de software utilizado:*
 
-**Scantailor Enhanced**
+#### Scantailor Enhanced: ####
 
 - [Instrucciones paso a paso para compilar Scan Tailor en Debian](http://codex.bibliohack.tk/scan_tailor/)
 - [Código fuente en github](https://github.com/scantailor/scantailor/tree/enhanced)
 
 Nota: La ruta por defecto al ejecutable en el script es: `/opt/src/scantailor-enhanced/scantailor-cli`.
 
-**Tesseract**
+#### Tesseract: ####
 
 instalar
 
@@ -17,24 +18,24 @@ instalar
 
 Compilar: [Compilar e Instalar tesseract-ocr en Debian](http://codex.bibliohack.tk/tesseract-ocr/)
 
-**pdfbeads**  
+#### Pdfbeads: ####
 
 - [Instrucciones paso a paso para instalar PDFBeads en Debian](http://codex.bibliohack.tk/pdfbeads/)
 - [Página de Pdfbeads en rubygems.org](https://rubygems.org/gems/pdfbeads)
  
-**ImageMagick**
+#### ImageMagick: ####
 
 Para instalar en Debian/Ubuntu:
 
      apt-get install imagemagick
 
-**Gimp**
+#### Gimp: ####
 
 Para instalar en Debian/Ubuntu:
 
       apt-get install gimp gimp-plugin-registry
 
-**Exactimage**
+#### Exactimage: ####
 
 Para instalar en Debian/Ubuntu:
 
@@ -43,6 +44,7 @@ Para instalar en Debian/Ubuntu:
 [Sitio web de exactimage](http://exactcode.com/opensource/exactimage/)
 
 
-##### Documentación
+Documentación
+-------------
 
 [profile-processor](https://github.com/d-a-l/fcen-tesis/blob/master/fcen-postprocessing/docs/profile-processor/man-profile-processor.md)
