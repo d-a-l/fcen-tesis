@@ -2,7 +2,7 @@
 
 `profile-processor [src=<ruta>] [wrk=<ruta>] [log=<ruta>] [out=<ruta>] [name=nombre] [dir=directorio] [profile=<perfiles>] [include|exclude=<archivos>] [imgimprove=<archivos>] [ext=<extensiones>] [no-ocr] [no-overwrite-ocr] [clear]`
 
-<dl>
+<dl markdown="1">
 <dt>`src=<ruta>`</dt>
 <dd>Origen: ruta al directorio que contiene los archivos para procesar. Por defecto toma el directorio donde se esté ejecutando el script. La ruta puede ser absoluta o relativa. Ej: `src=/opt/archives/tesis1`.</dd>
 
