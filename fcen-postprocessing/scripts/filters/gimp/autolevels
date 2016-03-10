@@ -1,0 +1,42 @@
+#!/bin/bash
+
+
+# OUT="out"
+# [[ -f "$OUT/$1" ]] && { echo "W: rm $OUT/$1"; rm "$OUT/$1"; }
+
+{
+cat <<EOF
+
+(define (do-retouch filename outfile)
+ (let* (
+ (image (car (gimp-file-load RUN-NONINTERACTIVE filename filename)))
+ (base-layer (car (gimp-image-merge-visible-layers image CLIP-TO-IMAGE)))
+ )
+
+ ; filtros
+ ; aplicar auto levels
+ (gimp-levels-stretch base-layer)
+
+ (gimp-levels-stretch base-layer)
+ ; (gimp-levels base-layer 0 114 175 2.00 0 255 )
+ ; (gimp-levels base-layer 0 114 175 1.20 0 255 )
+ ; (gimp-levels base-layer 0 114 255 8.00 0 255 )
+
+ ; guardar
+ (file-tiff-save RUN-NONINTERACTIVE image base-layer outfile outfile 0)
+ (gimp-image-delete image) ; ... or the memory will explode
+ )
+ )
+
+ ;(gimp-message-set-handler 1) ; Messages to standard output
+
+ ; (gimp-message "$1")
+(do-retouch "$1" "$2")
+(gimp-quit 0)
+EOF
+
+} | gimp -i -b -
+
+
+#  (gimp-curves-spline base-layer HISTOGRAM-VALUE 6 #(0 0 147 44 255 122 ) )
+

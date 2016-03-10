@@ -1,0 +1,12 @@
+#!/bin/bash
+
+echo "[debug] parametros generados para fcen-postprocessing:"; echo
+
+while [ $# -ne 0 ]
+  do
+     arg="$1"
+     echo "- $arg"
+     shift
+  done
+
+echo

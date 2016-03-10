@@ -1,0 +1,352 @@
+#!/bin/bash
+
+paramArr=()
+profileArr=()
+inclexclArr=()
+
+FPP_SCRIPT="$( dirname "${BASH_SOURCE[0]}" )/fcen-postprocessing"
+DEBUG_PARAM="$( dirname "${BASH_SOURCE[0]}" )/debug/test_parametros"
+
+# ========================================= functions =========================================
+
+paramArr_Find () {
+
+  local needle="$1"
+  local i
+  for i in "${paramArr[@]}"
+    do [[ "$i" == "$needle"  ]] && { echo "Yes"; break; }
+    done
+}
+
+paramArr_FindRepl () {
+
+  local needle="$1"
+  local replace="$2"
+  local i
+  for i in "${!paramArr[@]}"
+    do [[ "${paramArr[$i]}" == "$needle"  ]] && paramArr[$i]=="$replace"
+    done
+}
+
+paramArr_Del () {
+
+  local needle="$1"
+  local i
+  local newArr=()
+  for i in "${paramArr[@]}"
+    do [[ "$i" != "$needle"  ]] && newArr+=("$i")
+    done
+
+  paramArr=("${newArr[@]}")
+}
+
+expandDash () {
+
+  local toExpand="$1"
+  local -a valArr
+  local min max prefix digits i j out
+   
+  IFS="-" read -ra valArr <<< "$toExpand"
+  
+  [[ "${valArr[1]}" == "" ]] && return 0
+  
+  min=${valArr[0]//[^0-9]/}
+  max=${valArr[1]//[^0-9]/}
+  prefix=${valArr[0]//[0-9]/}
+  digits=${#min}
+
+  min=$((10#$min))
+  max=$((10#$max))
+
+  [[ "$min" -gt "$max" ]] && return 0
+  
+  for (( i = $min ; i <= $max ; i++ ))
+    do 
+      j=$(printf "%0${digits}d" "$i")
+      out="$out""$prefix""$j"","
+    done
+    
+  out="${out%,}"           #remove last ','
+  echo "$out"
+}
+
+processLists () {
+
+  local string="$1"
+  local s t out
+  local -a tmpArr
+  
+  IFS="," read -ra tmpArr <<< "$string"
+
+  out=""; for s in "${tmpArr[@]}"
+    do
+      if [[ "$s" == *"-"* ]]
+        then
+          t=$( expandDash "$s" )
+          [[ "$t" !=  "" ]] && out="$out""$t"","
+      else
+          out="$out""$s"","
+      fi
+    done
+
+  out="${out%,}"           #remove last ','
+  echo "$out"
+}
+
+# =============================================================================================
+
+SRC_PATH=""
+WRK_PATH=""
+LOG_PATH=""
+OUT_PATH=""
+PROFILE_LIST=""
+DIR_PATH=""
+INCLUDE_LIST=""
+EXCLUDE_LIST=""
+IMGIMPROVE_LIST=""
+CLEAR=""
+
+# ==================================== processing arguments ===================================
+
+while [ $# -ne 0 ]
+  do
+    arg="$1"
+    case "$arg" in
+        src=*)
+            SRC_PATH="${arg#*=}"
+            ;;
+        wrk=*)
+            WRK_PATH="${arg#*=}"
+            ;;
+        ext=*)
+            INPUT_EXT="${arg#*=}"
+            ;;
+        log=*)
+            LOG_PATH="${arg#*=}"
+            ;;
+        out=*)
+            OUT_PATH="${arg#*=}"
+            ;;
+        name=*)
+            paramArr+=("name=${arg#*=}")
+            ;;
+        dir=*)
+            DIR_PATH="${arg#*=}"
+            ;;
+        profile=*)
+            PROFILE_LIST="${arg#*=}"
+            ;;
+        include=*)
+            INCLUDE_LIST="${arg#*=}"
+            ;;
+        exclude=*)
+            EXCLUDE_LIST="${arg#*=}"
+            ;;
+        imgimprove=*)
+            IMGIMPROVE_LIST="${arg#*=}"
+            ;;
+        no-ocr)
+            paramArr+=('tesseract-not-overwrite')
+            ;;
+        no-overwrite-ocr)
+            paramArr+=('tesseract-disabled')
+            ;;
+        clear)
+            paramArr+=('clear')
+            CLEAR="Yes"
+            ;;
+
+    esac
+    shift
+  done           
+
+# ======================================= config paths ========================================
+
+# paths inherit 1
+[[ "$WRK_PATH" == "" ]] && WRK_PATH="$SRC_PATH"
+
+# adding dir
+if [ "$DIR_PATH" != "" ]
+  then
+    [[ -z "$SRC_PATH" ]] && SRC_PATH="." || SRC_PATH="${SRC_PATH%/}"
+    [[ -z "$WRK_PATH" ]] && WRK_PATH="." || WRC_PATH="${WRC_PATH%/}"
+    SRC_PATH="$SRC_PATH/$DIR_PATH"
+    WRK_PATH="$WRK_PATH/$DIR_PATH"
+fi
+
+# paths inherit 2
+[[ "$LOG_PATH" == "" ]] && LOG_PATH="$WRK_PATH"
+[[ "$OUT_PATH" == "" ]] && OUT_PATH="$WRK_PATH"
+
+# asign path to param
+[[ "$SRC_PATH" != "" ]] && paramArr+=("src=$SRC_PATH")
+[[ "$WRK_PATH" != "" ]] && paramArr+=("wrk=$WRK_PATH")
+[[ "$LOG_PATH" != "" ]] && paramArr+=("log=$LOG_PATH")
+[[ "$OUT_PATH" != "" ]] && paramArr+=("out=$OUT_PATH")
+
+
+# ====================================== process profiles =====================================
+
+if [ "$PROFILE_LIST" == "" ]
+  then
+     paramArr+=('layout-onepage')
+     paramArr+=('content-detection-disabled')
+     paramArr+=("color-mode=black_and_white")
+     paramArr+=('picture-shape=rectangular')
+else
+     IFS="," read -ra profileArr <<< "$PROFILE_LIST"
+
+     #basic option
+     paramArr+=('content-detection-disabled')
+     paramArr+=("color-mode=black_and_white")
+     paramArr+=('picture-shape=rectangular')
+
+     for profile in "${profileArr[@]}"
+       do
+         case "$profile" in
+           a1)
+               paramArr+=('layout-disable-page-detection')
+               ;;
+           a2)
+               paramArr+=('layout-onepage')
+               ;;
+           a3)
+               paramArr+=('layout-oneandhalf')
+               ;;
+           b1)
+               paramArr+=('filter-hpass-background')
+               ;;
+           b2)
+               # ToDo 
+               ;;
+           c1)
+               paramArr+=('bolder-text-aggressive')
+               ;;
+           c2)
+               paramArr+=('thinner-text-aggressive')
+               ;;
+           d1)
+               paramArr_Del 'content-detection-disabled'
+               paramArr+=('enable-auto-margins')
+               paramArr+=('content-detection=normal')
+               paramArr+=('despeckle=normal')
+               ;;
+           f1)
+               # paramArr+=('filter-hpass-lowcontrast')
+               paramArr+=('filter-autolevels-lowcontrast')
+               paramArr+=('bolder-text-normal')
+               ;;
+           g1)
+               paramArr+=('filter-autolevels-darkbg')
+               ;;
+           g2)
+               paramArr+=('filter-invertlevels')
+               ;;
+         esac
+       done
+fi
+
+# =================================== detect two-step process =================================
+
+if [ "$IMGIMPROVE_LIST" != "" ] && [ "$CLEAR" != "Yes" ]
+  then
+    TWOSTEPS="Yes"
+fi
+
+
+# ====================================== processing lists =====================================
+
+#expand dashes
+IMGIMPROVE_LIST=$(processLists "$IMGIMPROVE_LIST")
+INCLUDE_LIST=$(processLists "$INCLUDE_LIST")
+EXCLUDE_LIST=$(processLists "$EXCLUDE_LIST")
+
+if [ "$IMGIMPROVE_LIST" != "" ]
+  then
+    if [ "$EXCLUDE_LIST" != "" ]
+      then
+        inclexclArr+=("exclude=$IMGIMPROVE_LIST,$EXCLUDE_LIST")
+        # warning que pasa con los duplicados?
+    else
+        inclexclArr+=("exclude=$IMGIMPROVE_LIST")
+    fi
+fi
+
+if [ "$INCLUDE_LIST" != "" ]
+  then
+    inclexclArr+=("include=$INCLUDE_LIST")
+fi
+
+# ================================ RUN POSTPROCESSING 1° ======================================
+
+# ejecutar postprocess (excluyendo páginas con imágenes si las hubiera)
+
+[[ "$TWOSTEPS" == "Yes" ]] && paramArr+=('pdfbeads-disabled')
+
+echo
+$DEBUG_PARAM "${paramArr[@]}" "${inclexclArr[@]}" 
+
+echo "|Step 1|"; echo
+$FPP_SCRIPT "${paramArr[@]}" "${inclexclArr[@]}" ; echo
+
+# ======================================= step two ============================================
+
+[[ "$TWOSTEPS" == "Yes" ]] || exit 0
+
+if [ "$(paramArr_Find 'color-mode=black_and_white')" != "Yes" ]
+ then
+   paramArr_FindRepl 'color-mode=black_and_white' 'color-mode=mixed'
+ else
+   paramArr+=('color-mode=mixed')
+fi
+
+# si existen, eliminar otros parametros incompatibles con mejora para imagenes
+if [ "$(paramArr_Find 'filter-hpass-lowcontrast')" == "Yes" ]
+  then
+    paramArr_FindRepl 'filter-hpass-lowcontrast' 'filter-hpass-min'
+fi
+if [ "$(paramArr_Find 'filter-hpass-background')" == "Yes" ]
+  then
+    paramArr_Del 'filter-hpass-background'
+fi
+if [ "$(paramArr_Find 'filter-autolevels')" == "Yes" ]
+  then
+    paramArr_Del 'filter-autolevels'
+fi
+
+paramArr_Del 'pdfbeads-disabled'
+paramArr+=('tesseract-not-overwrite')
+
+# (?) filter-invertlevels
+
+# ======================================= invert lists ========================================
+
+unset inclexclArr
+
+if [ "$IMGIMPROVE_LIST" != "" ]
+  then
+    if [ "$INCLUDE_LIST" != "" ]
+      then
+       #Todo: intersect includelist & imgimprove!
+       # (solo procesar las imgimprove que esten en include)
+        inclexclArr+=("include=$IMGIMPROVE_LIST")
+    else
+        inclexclArr+=("include=$IMGIMPROVE_LIST")
+    fi
+fi
+
+if [ "$EXCLUDE_LIST" != "" ]
+  then
+    inclexclArr+=("exclude=$EXCLUDE_LIST")
+fi
+
+
+# ================================= RUN POSTPROCESSING 2° =====================================
+
+# procesar por segunda vez (sólo las páginas con imágenes)
+
+echo "-----------"; echo
+$DEBUG_PARAM "${paramArr[@]}" "${inclexclArr[@]}" 
+
+echo "|Step 2|"; echo
+$FPP_SCRIPT "${paramArr[@]}" "${inclexclArr[@]}"; echo
