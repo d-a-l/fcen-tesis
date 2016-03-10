@@ -5,7 +5,7 @@ fcen-tesis
 
 #### Scantailor Enhanced: ####
 
-- [Instrucciones paso a paso para compilar Scan Tailor en Debian](http://codex.bibliohack.tk/scan_tailor/)
+- [Instrucciones paso a paso para compilar Scantailor en Debian](http://codex.bibliohack.tk/scan_tailor/)
 - [Código fuente en github](https://github.com/scantailor/scantailor/tree/enhanced)
 
 Nota: La ruta por defecto al ejecutable en el script es: `/opt/src/scantailor-enhanced/scantailor-cli`.
