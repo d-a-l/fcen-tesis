@@ -21,16 +21,20 @@ Nombre del archivo de salida (pdf), sin la extension. Por defecto "Tesis".
 Un directorio que se añadirá al final de la rutas especificadas para origen y procesamiento. Por ejemplo: si se especifica `src=/opt/tesis` y `wrk=/home/user`, al incluir la opción `dir=Tesis_Milstein` se agregará el directorio en la ruta origen `/opt/tesis/Tesis_Milstein` y se creará (si no existiera) el directorio `/home/user/Tesis_Milstein` para su procesamiento. En caso de no haberse especificado nada para `out` o `log`, tomarán este ultimo valor.
 
 **`profile=<lista de perfiles>`**   
-Perfiles: los perfiles asignados al proceso, separados por comas y sin espacios. Sin especificar se aplica perfil por defecto `default`. Ej: `profile=a2,b1,d1`.
+Perfiles: los perfiles asignados al proceso, separados por comas y sin espacios. Sin especificar se aplica perfil por defecto `default`. Lista de perfiles al final de este documento. El perfil `default` corresponde a `a2`.
+Ej: `profile=a2,b1,d1`.
 
 **`include|exclude=<lista de archivos>`**   
-incluir o excluir una lista de archivos separados por comas. En ambos casos se puede colocar el nombre completo (sin la extensión y sin espacios) o los últimos caracteres (por ejemplo `001,002,003,` etc ). En el caso de `include`, solo cargará los archivos especificados, en el caso de `exclude`, cargará todos los archivos con la extensión permitida. Si no se especifica `include`/`exclude` el script cargará todos los archivos con la extensión permitida. Ej: `include=001,002,005,012,132,345,346`.
+incluir o excluir una lista de archivos separados por comas. En ambos casos se puede colocar el nombre completo (sin la extensión y sin espacios) o los últimos caracteres (por ejemplo `001,002,003,` etc ). En el caso de `include`, solo cargará los archivos especificados, en el caso de `exclude`, cargará todos los archivos con la extensión permitida menos los indicados. Si no se especifica `include`/`exclude` el script cargará todos los archivos con la extensión permitida.   
+Ej: `include=001,002,005,012,132,345,346`.
 
 **`ext=<lista de extensiones>`**   
-Lista de extensiones de los archivos de imagen a procesar, separadas por comas. Por defecto ext=tif,TIF (Sensitivo a mayúsculas/minúsculas). Ej: `ext=jpg,JPG,jpeg,JPEG`.
+Lista de extensiones de los archivos de imagen a procesar, separadas por comas. Por defecto ext=tif,TIF (Sensitivo a mayúsculas/minúsculas).   
+Ej: `ext=jpg,JPG,jpeg,JPEG`.
 
 **`imgimprove=<lista de archivos>`**   
-Lista de los archivos que contienen fotografías o gráficas que deben ser procesadas como imágenes en color o valores de grises. El script excluye estos archivos en un primer procesamiento siguiendo el perfil especificado en 'profile', y en una segunda instancia los procesa independientemente agregando o modificando el perfil seleccionado con ciertas características óptimas para detectar y procesar imágenes (en desmedro de otras que optimizan el OCR). Ej: `imgimprove=001,002,005,012,132,345,346`.
+Lista de los archivos que contienen fotografías o gráficas que deben ser procesadas como imágenes en color o valores de grises. El script excluye estos archivos en un primer procesamiento siguiendo el perfil especificado en 'profile', y en una segunda instancia los procesa independientemente agregando o modificando el perfil seleccionado con ciertas características óptimas para detectar y procesar imágenes (en desmedro de otras que optimizan el OCR).   
+Ej: `imgimprove=001,002,005,012,132,345,346`.
 
 **`no-ocr`**   
 Si se incluye este parámetro no se realizará la operación de reconocimiento de caracteres (OCR).
@@ -66,4 +70,3 @@ Color:
 * **g1**: Fondo oscuro (plano, sin variación).
 * **g2**: Fondo/figura invertido (texto blanco).
 
-El perfil `default` corrsponde a 'a2'.
