@@ -26,7 +26,7 @@ get_filelist() {
    then
       for m in "${extensionArr[@]}"
       do
-        [[ "$m" ]] && f=$f$(find "$path"/*$m -type f -printf "%f\n" 2> /dev/null)    #extension var $m cannot be null
+        [[ "$m" ]] && f=$f$(find -L "$path"/*$m -type f -printf "%f\n" 2> /dev/null)    #extension var $m cannot be null
       done
       while read -r line
       do
@@ -37,7 +37,7 @@ get_filelist() {
       do
         for m in "${extensionArr[@]}"
         do
-          f=$(find "$path"/*$n$m -type f -printf "%f\n" -quit 2> /dev/null)      #quit: getting only the first match
+          f=$(find -L "$path"/*$n$m -type f -printf "%f\n" -quit 2> /dev/null)      #quit: getting only the first match
           [[ "$f" ]] && eval "${targetArrayName}+=(\"$f\")"
         done
       done
