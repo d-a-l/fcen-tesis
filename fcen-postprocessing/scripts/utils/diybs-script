@@ -1,0 +1,174 @@
+#!/bin/bash
+
+[[ -z "$1" ]] && { echo "No se ha ingresado ningun parametro (ruta)."; exit 1; }
+PROJPATH="${1%/}" #remove last slash if any
+PROJECT_NAME=$( basename "$PROJPATH" )
+
+echo "=== '$PROJECT_NAME' ==="
+echo ""
+
+SCRIPT="/opt/src/fcen-tesis/fcen-postprocessing/scripts/profile-processor"
+
+# --- configuration
+
+EVENPATH="$PROJPATH/pre/even"
+ODDPATH="$PROJPATH/pre/odd"
+ALLPATH="$PROJPATH/pre/all"
+
+SOURCE="$ALLPATH"
+DEST="$PROJPATH/done"
+LOGPATH="$PROJPATH/done/.logs"
+OUTPUT_NAME="documento.pdf"
+
+PREV_SC=""
+PREV_OCR=""
+PREV_PDFB=""
+
+OPTION_MAKE_SOURCE="Yes"
+PARAM="follow-symbolic-links"
+       
+# --- check directory tree structure
+
+[[ -d "$PROJPATH" ]] || { echo "El directorio proporcionado no existe: '$PROJPATH'"; exit 1; }
+
+MSG="La estructura de directorios encontrada es incorrecta. 
+asegúrese de que está ejecutando esta acción sobre el directorio 
+principal proyecto, y no sobre subdirectorios del mismo."
+
+[[ -d "$EVENPATH" ]] || { echo "$MSG"; exit 1; }
+[[ -d "$ODDPATH"  ]] || { echo "$MSG"; exit 1; }
+[[ -d "$ALLPATH"  ]] || { echo "$MSG"; exit 1; }
+
+# --- check prior execution
+
+if [ -d "$DEST/.processing" ]
+  then
+    if find "$DEST/.processing" -maxdepth 1 -name "*.tif" | grep -q .
+      then
+        PREV_SC="Yes"
+        echo "- Posibles archivos de un post-procesamiento previo detectados: Scantailor."
+    fi
+    if find "$DEST/.processing" -maxdepth 1 -name "*.html" | grep -q .
+      then
+        PREV_OCR="Yes"
+        echo "- Posibles archivos de un post-procesamiento previo detectados: OCR."
+    fi
+    if find "$DEST/.processing" -maxdepth 1 -name "*.jbig2" | grep -q .
+      then
+        PREV_PDFB="Yes"
+        echo "- Posibles archivos de un post-procesamiento previo detectados: PDFBeads."
+        PARAM="follow-symbolic-links reoptimize-pdf"
+    fi
+fi
+
+if [ -f "$DEST/$OUTPUT_NAME" ]
+  then
+   echo ""
+   echo "ATENCION: '$PROJECT_NAME' ya contiene un documento PDF probablemente"
+   echo "producido durante un post-procesamiento anterior."
+   echo ""
+   echo "¿Cómo desea continuar?"
+   echo "- Presione ENTER "
+   echo "    para salir sin hacer nada."
+   echo "- Presione '1' + ENTER"
+   echo "    para repetir el proceso completo de generación del PDF desde las"
+   echo "    de capturas originales (post-procesado y realización de OCR)."
+   if [ "$PREV_SC" == "Yes" ]; then
+     echo "- Presione '2' + ENTER"
+     echo "    para generar el PDF utilizando el material ya post-procesado disponible,"
+     echo "    pero realizando nuevamente el OCR."
+   fi
+   if [ "$PREV_SC" == "Yes" ] && [ "$PREV_OCR" == "Yes" ]; then
+     echo "- Presione '3' + ENTER"
+     echo "    para generar el PDF utilizando el material post-procesado y los"
+     echo "    archivos de texto OCR disponibles."
+
+   fi
+    
+   read option
+   case "$option" in
+      "")
+         exit 0
+         ;;
+      1)
+         OPTION_MAKE_SOURCE="Forced"
+         ;;
+      2)
+         if [ "$PREV_SC" == "Yes" ] 
+         then 
+           PARAM="no-scantailor"; 
+           OPTION_MAKE_SOURCE="No"
+           if [ "$PREV_PDFB" == "Yes" ]; then PARAM="$PARAM reoptimize-pdf"; fi
+         else
+           exit 0
+         fi
+         ;;
+      3)
+         if [ "$PREV_OCR" == "Yes" ] 
+         then
+           PARAM="compile-pdf-only"
+           OPTION_MAKE_SOURCE="No"
+           if [ "$PREV_PDFB" == "Yes" ]; then PARAM="$PARAM reoptimize-pdf"; fi
+         else
+           exit 0
+         fi
+         ;;
+      *)
+         exit 0
+         ;;
+   esac
+fi
+
+# --- create symbolic links in all dir
+
+# find "$EVENPATH" -maxdepth 1 -type f -exec mv {} "$ALLPATH" \;
+# find "$ODDPATH" -maxdepth 1 -type f -exec mv {} "$ALLPATH" \;
+
+if [ "$OPTION_MAKE_SOURCE" != "No" ]
+  then
+   # delete symliks if any
+   if find "$ALLPATH" -mindepth 1 -print -quit | grep -q .
+    then
+      if [ "$OPTION_MAKE_SOURCE" != "Forced" ]
+       then
+         echo ""
+         echo "ATENCION: '$PROJECT_NAME' contiene archivos de un post-procesamiento"
+         echo "inconcluso realizado con anterioridad."
+         echo ""
+         echo "¿Cómo desea continuar?"
+         echo "- Presione ENTER "
+         echo "    para salir sin hacer nada."
+         echo "- Presione '1' + ENTER"
+         echo "    para generar el PDF sobreescribiendo lo anterior."
+          
+         read option
+         case "$option" in
+            "")
+                exit 0
+                ;;
+            1)
+                # continue
+                ;;
+            *)
+                exit 0
+                ;;
+         esac
+      fi
+
+      find "$ALLPATH" -mindepth 1 -delete
+   fi
+   
+   echo "debug: "; ls "$ALLPATH"; echo "-"
+   find "$EVENPATH" -maxdepth 1 -type f -exec ln -s {} "$ALLPATH" \; 
+   find "$ODDPATH" -maxdepth 1 -type f -exec ln -s {} "$ALLPATH" \; 
+fi
+
+# --- profile-processor
+
+[[ -d "$LOGPATH" ]] || { mkdir "$LOGPATH" || { echo "No se pudo crear '$LOGPATH'"; exit 1; } }
+
+echo "Executing $SCRIPT"
+
+$SCRIPT "src=$SOURCE" "wrk=$DEST" "log=$LOGPATH" $PARAM "name=$OUTPUT_NAME" "profile=a3"
+
+

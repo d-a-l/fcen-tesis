@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Accion personalizada para: thunar custom actions
+
+# Nombre: Generar PDF
+# Descripción: Generar PDF desde archivos capturados con dalclick/diybookscanner
+# Comando: gnome-terminal -e /opt/src/fcen-tesis/fcen-postprocessing/scripts/utils/thunar-ca-diybs-script %f
+
+PPATH="$1"
+
+echo "iniciando post-procesamiento..."
+echo ""
+
+/opt/src/fcen-tesis/fcen-postprocessing/scripts/utils/diybs-script "$PPATH"
+
+ERROR_CODE="$?"
+
+echo ""
+echo "Se han terminado de ejecutar todas las tareas de post-procesamiento "
+echo "seleccionadas."
+echo
+if [ "$ERROR_CODE" -ne "0" ]
+  then
+    echo "Se han producido errores: codigo '$ERROR_CODE'"
+fi
+echo ""
+echo "presione ENTER para salir"
+read 
+
+exit 0
+
