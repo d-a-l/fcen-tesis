@@ -105,6 +105,7 @@ INCLUDE_LIST=""
 EXCLUDE_LIST=""
 IMGIMPROVE_LIST=""
 CLEAR=""
+SCANTAILOR_DISABLED=""
 
 # ==================================== processing arguments ===================================
 
@@ -146,10 +147,28 @@ while [ $# -ne 0 ]
             IMGIMPROVE_LIST="${arg#*=}"
             ;;
         no-ocr)
-            paramArr+=('tesseract-not-overwrite')
+            paramArr+=('tesseract-disabled')
             ;;
         no-overwrite-ocr)
+            paramArr+=('tesseract-not-overwrite')
+            ;;
+        no-scantailor)
+            paramArr+=('scantailor-disabled')
+            SCANTAILOR_DISABLED="Yes"
+            ;;
+        compile-pdf-only)
             paramArr+=('tesseract-disabled')
+            paramArr+=('scantailor-disabled')
+            SCANTAILOR_DISABLED="Yes"
+            ;;
+        reoptimize-pdf)
+            paramArr+=('pdfbeads-clear')
+            ;;
+        no-compile-pdf)
+            paramArr+=('pdfbeads-disabled')
+            ;;
+        follow-symbolic-links)
+            paramArr+=('follow-symbolic-links')
             ;;
         clear)
             paramArr+=('clear')
@@ -187,21 +206,23 @@ fi
 
 # ====================================== process profiles =====================================
 
-if [ "$PROFILE_LIST" == "" ]
-  then
-     paramArr+=('layout-onepage')
-     paramArr+=('content-detection-disabled')
-     paramArr+=("color-mode=black_and_white")
-     paramArr+=('picture-shape=rectangular')
-else
-     IFS="," read -ra profileArr <<< "$PROFILE_LIST"
+if [ "$SCANTAILOR_DISABLED" != "Yes" ]
+ then
+   if [ "$PROFILE_LIST" == "" ]
+    then
+      paramArr+=('layout-onepage')
+      paramArr+=('content-detection-disabled')
+      paramArr+=("color-mode=black_and_white")
+      paramArr+=('picture-shape=rectangular')
+   else
+      IFS="," read -ra profileArr <<< "$PROFILE_LIST"
 
-     #basic option
-     paramArr+=('content-detection-disabled')
-     paramArr+=("color-mode=black_and_white")
-     paramArr+=('picture-shape=rectangular')
-
-     for profile in "${profileArr[@]}"
+      #basic option
+      paramArr+=('content-detection-disabled')
+      paramArr+=("color-mode=black_and_white")
+      paramArr+=('picture-shape=rectangular')
+ 
+      for profile in "${profileArr[@]}"
        do
          case "$profile" in
            a1)
@@ -244,11 +265,12 @@ else
                ;;
          esac
        done
+   fi
 fi
 
 # =================================== detect two-step process =================================
 
-if [ "$IMGIMPROVE_LIST" != "" ] && [ "$CLEAR" != "Yes" ]
+if [ "$IMGIMPROVE_LIST" != "" ] && [ "$CLEAR" != "Yes" ] && [ "$SCANTAILOR_DISABLED" != "Yes" ]
   then
     TWOSTEPS="Yes"
 fi

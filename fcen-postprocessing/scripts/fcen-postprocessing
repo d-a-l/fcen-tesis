@@ -26,7 +26,7 @@ get_filelist() {
    then
       for m in "${extensionArr[@]}"
       do
-        [[ "$m" ]] && f=$f$(find -L "$path"/*$m -type f -printf "%f\n" 2> /dev/null)    #extension var $m cannot be null
+        [[ "$m" ]] && f=$f$(find "$FIND_OPTIONS" "$path"/*$m -type f -printf "%f\n" 2> /dev/null)    #extension var $m cannot be null
       done
       while read -r line
       do
@@ -37,7 +37,7 @@ get_filelist() {
       do
         for m in "${extensionArr[@]}"
         do
-          f=$(find -L "$path"/*$n$m -type f -printf "%f\n" -quit 2> /dev/null)      #quit: getting only the first match
+          f=$(find "$FIND_OPTIONS" "$path"/*$n$m -type f -printf "%f\n" -quit 2> /dev/null)      #quit: getting only the first match
           [[ "$f" ]] && eval "${targetArrayName}+=(\"$f\")"
         done
       done
@@ -142,6 +142,7 @@ echo "== $me [$(date +%Y-%m-%d\ %T)] =="; echo
 
  #
  RENAMING_ENABLED="Yes"
+ FIND_OPTIONS=""
 
 # ============================================================================
 #                         Processing input arguments
@@ -322,6 +323,10 @@ do
             M="${M}pdfbeads-clear "
             PDFBEADS_CLEAR="Yes"
             ;;
+        follow-symbolic-links)
+            M="${M}follow-symbolic-links "
+            FIND_OPTIONS="-L"
+            ;;
         clear)
             CLEAR="Yes"
             ;;
@@ -433,7 +438,14 @@ fi
 
 #alt method -> shopt -s nullglob; srcFiles=($INPUT_EXT); shopt -u nullglob;
 
-if [ -z $srcFiles ] ; then echo "ERROR: no hay archivos para procesar en $SOURCE_DIR" | tee -a "$LOG_PATH"; exit 0; fi
+if [ "$SCANTAILOR_ENABLED" == "Yes" ] || [ "$PRE_FILTER" == "Yes" ]
+ then
+  if [ -z $srcFiles ]
+   then
+     echo "ERROR: no hay archivos para ser procesados por scantailor o pre-filtros en '$SOURCE_DIR'" | tee -a "$LOG_PATH"
+     exit 0
+  fi
+fi
 
 # OJO este if da falso con array=('' foo)
 
@@ -493,7 +505,7 @@ if [ "$PRE_FILTER" == "Yes" ]
          let nFilter=nFilter+1
    done
 else
-   echo "no prefilter"
+   echo "no prefilter required"
 fi
 
 # ============================================================================
@@ -534,6 +546,8 @@ then
 
    echo
 
+else
+   echo "scantailor disabled"
 fi
 
 # ============================================================================
@@ -566,6 +580,8 @@ then
    done
 
    if [ "$RENAMING" == "Yes" ]; then echo "done"; else echo " - no file had to be renamed"; fi
+else
+   echo "renaming disabled"
 fi
 
 # ============================================================================
@@ -574,21 +590,28 @@ fi
 
 # we are in "$WORKING_BASE/$PROC_DIR/" from previous
 
-declare -a procFiles
-
-if [ "$EXCLUDE_FILES" ]
+if [ "$TESSERACT_ENABLED" == "Yes" ] #only for tesseract, pdfbeads process all existing .tif file in $PROC_DIR
  then
-   declare -a allFiles
-   get_filelist "allFiles" "." "$TIFF_EXT" "$INCLUDE_FILES" #antes era ''. testear!!
-   declare -a exclFiles
-   get_filelist "exclFiles" "." "$TIFF_EXT" "$EXCLUDE_FILES"
-   exclude_files "procFiles" allFiles[@] exclFiles[@]
-   unset allFiles exclFiles
- else
-   get_filelist "procFiles" "." "$INPUT_EXT" "$INCLUDE_FILES"             #if INCLUDE_FILES == "" get_filelist get all files in dir
-fi
+   declare -a procFiles
 
-if [ -z $procFiles ] ; then echo "ERROR: no hay archivos para procesar en $PROC_DIR" | tee -a "$LOG_PATH"; exit 0; fi
+   if [ "$EXCLUDE_FILES" ]
+    then
+      declare -a allFiles
+      get_filelist "allFiles" "." "$TIFF_EXT" "$INCLUDE_FILES" #antes era ''. testear!!
+      declare -a exclFiles
+      get_filelist "exclFiles" "." "$TIFF_EXT" "$EXCLUDE_FILES"
+      exclude_files "procFiles" allFiles[@] exclFiles[@]
+      unset allFiles exclFiles
+    else
+      get_filelist "procFiles" "." "$INPUT_EXT" "$INCLUDE_FILES"             #if INCLUDE_FILES == "" get_filelist get all files in dir
+   fi
+
+   if [ -z $procFiles ]
+    then
+      echo "ERROR: no hay archivos para ser procesados por tesseract en '$PROC_DIR'" | tee -a "$LOG_PATH"
+      exit 0
+   fi
+fi
      
 # ============================================================================
 #                                  TESSERACT
@@ -638,6 +661,8 @@ then
 
    { [[ -f "$OCR_ERROR_PATH" ]] && [[ ! -s "$OCR_ERROR_PATH" ]]; } && { rm "$OCR_ERROR_PATH"; echo -n "No errors" ;}
    echo
+else
+   echo "tesseract disabled"
 fi
 
 # ============================================================================
@@ -655,11 +680,16 @@ if [ "$PDFBEADS_CLEAR" == "Yes" ]
   rmFiles=($rmEXT); 
   shopt -u nullglob;
 
-  for f in "${rmFiles[@]}"
-  do
-    echo "rm $f"
-    rm "$f"
-  done
+  if [ ! -z $rmFiles ]
+   then
+     for f in "${rmFiles[@]}"
+     do
+       echo "rm $f"
+       rm "$f"
+     done
+  else
+     echo " - no files to clear"
+  fi
 fi
 
 # statement: PDFBeads process does not comply with exclude/include param, process all existing .tif file in $PROC_DIR
@@ -684,6 +714,8 @@ then
    (pdfbeads $PDFBEADS_ARGS *$TIFF_EXT >"$OUT_PDF_DIR/$OUT_PDF_NAME" 2> >(tee -a "$LOG_PATH" >&2)) 2>&1 | awk '{ printf "." }'
    echo -n "done"
    PdfbeadsTime=$(expr `date +%s` - $t); echo " - ${PdfbeadsTime}s";
+else
+   echo "pdfbeads disabled"
 fi
 
 # ============================================================================
