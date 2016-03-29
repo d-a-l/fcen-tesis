@@ -42,8 +42,20 @@ Si se incluye este parámetro no se realizará la operación de reconocimiento d
 **`no-overwrite-ocr`**  
 Si se incluye este parámetro no se realizará la operación de reconocimiento de caracteres (OCR) si existiese un archivo previo de ocr (hocr con extensión `.html`) ya generado anteriormente.
 
+**`compile-pdf-only`**  
+Sólo realiza el proceso final de compilación del PDF ejecutando `PDFBeads`. 
+
+**`no-compile-pdf`**  
+No se ejecuta `PDFBeads`, por lo tanto no se compilará el PDF final.
+
+**`reoptimize-pdf`**  
+Elimina los archivos comprimidos (`.jbig2`, `.jpg`, etc.) que haya generado `PDFBeads` en una ejecución anterior.
+
+**`follow-symbolic-links`**  
+Sigue los `symbolic links`, si los hubiera, entre los archivos de origen a procesar.
+
 **`clear`**  
-Elimina todos los archivos generados por el sript: el pdf final, las carpetas ocultas con archivos intermedios (`.processing`, `.preprocessing`, etc), y los archivos de log. No elimina ningún archivo de origen.
+Elimina todos los archivos generados por el script: el PDF final, las carpetas ocultas con archivos intermedios (`.processing`, `.preprocessing`, etc), y los archivos de log. No elimina ningún archivo de origen.
 
 ### Referencia de perfiles
 
