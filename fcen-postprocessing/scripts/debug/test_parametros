@@ -9,4 +9,5 @@ while [ $# -ne 0 ]
      shift
   done
 
-echo
+echo "[/debug]"
+echo ""
