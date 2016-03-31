@@ -24,8 +24,10 @@ PREV_SC=""
 PREV_OCR=""
 PREV_PDFB=""
 
-OPTION_MAKE_SOURCE="Yes"
+CREATE_SYMLINKS_IN_ALL_DIR="Yes"
 PARAM="follow-symbolic-links"
+
+EXT="jpg,JPG,tif,TIF,jpeg,JPEG,TIFF,tiff"
        
 # --- check directory tree structure
 
@@ -71,33 +73,35 @@ if [ -f "$DEST/$OUTPUT_NAME" ]
    echo "- Presione ENTER "
    echo "    para salir sin hacer nada."
    echo "- Presione '1' + ENTER"
-   echo "    para repetir el proceso completo de generación del PDF desde las"
+   echo "    para repetir TODO el proceso completo de generación del PDF desde las"
    echo "    de capturas originales (post-procesado y realización de OCR)."
    if [ "$PREV_SC" == "Yes" ]; then
      echo "- Presione '2' + ENTER"
-     echo "    para generar el PDF utilizando el material ya post-procesado disponible,"
-     echo "    pero realizando nuevamente el OCR."
+     echo "    para re-procesar SOLO el OCR (reconocimiento de caracteres), usando"
+     echo "    usando el resto del material disponible para generar el PDF."
    fi
    if [ "$PREV_SC" == "Yes" ] && [ "$PREV_OCR" == "Yes" ]; then
      echo "- Presione '3' + ENTER"
-     echo "    para generar el PDF utilizando el material post-procesado y los"
-     echo "    archivos de texto OCR disponibles."
+     echo "    para volver a generar el PDF sin realizar nuevamente el post-procesado."
 
    fi
-    
-   read option
+
+   echo "- Presione '0' + ENTER"
+   echo "    para eliminar archivos producidos en post-procesados previos y salir"
+   echo ""   
+   read -p ">> " option
    case "$option" in
       "")
          exit 0
          ;;
       1)
-         OPTION_MAKE_SOURCE="Forced"
+         CREATE_SYMLINKS_IN_ALL_DIR="Forced" # solo evita que vuelva a pregunta que hacer mas adelante
          ;;
       2)
          if [ "$PREV_SC" == "Yes" ] 
          then 
            PARAM="no-scantailor"; 
-           OPTION_MAKE_SOURCE="No"
+           CREATE_SYMLINKS_IN_ALL_DIR="No"
            if [ "$PREV_PDFB" == "Yes" ]; then PARAM="$PARAM reoptimize-pdf"; fi
          else
            exit 0
@@ -107,11 +111,15 @@ if [ -f "$DEST/$OUTPUT_NAME" ]
          if [ "$PREV_OCR" == "Yes" ] 
          then
            PARAM="compile-pdf-only"
-           OPTION_MAKE_SOURCE="No"
+           CREATE_SYMLINKS_IN_ALL_DIR="No"
            if [ "$PREV_PDFB" == "Yes" ]; then PARAM="$PARAM reoptimize-pdf"; fi
          else
            exit 0
          fi
+         ;;
+      0)
+         PARAM="clear"
+         CREATE_SYMLINKS_IN_ALL_DIR="Empty-only"
          ;;
       *)
          exit 0
@@ -124,12 +132,12 @@ fi
 # find "$EVENPATH" -maxdepth 1 -type f -exec mv {} "$ALLPATH" \;
 # find "$ODDPATH" -maxdepth 1 -type f -exec mv {} "$ALLPATH" \;
 
-if [ "$OPTION_MAKE_SOURCE" != "No" ]
+if [ "$CREATE_SYMLINKS_IN_ALL_DIR" != "No" ]
   then
    # delete symliks if any
    if find "$ALLPATH" -mindepth 1 -print -quit | grep -q .
     then
-      if [ "$OPTION_MAKE_SOURCE" != "Forced" ]
+      if [ "$CREATE_SYMLINKS_IN_ALL_DIR" == "Yes" ]
        then
          echo ""
          echo "ATENCION: '$PROJECT_NAME' contiene archivos de un post-procesamiento"
@@ -140,8 +148,9 @@ if [ "$OPTION_MAKE_SOURCE" != "No" ]
          echo "    para salir sin hacer nada."
          echo "- Presione '1' + ENTER"
          echo "    para generar el PDF sobreescribiendo lo anterior."
-          
-         read option
+         echo ""
+         
+         read  -p ">> " option
          case "$option" in
             "")
                 exit 0
@@ -152,23 +161,46 @@ if [ "$OPTION_MAKE_SOURCE" != "No" ]
             *)
                 exit 0
                 ;;
-         esac
+         esac        
       fi
 
-      find "$ALLPATH" -mindepth 1 -delete
+      if [ "$CREATE_SYMLINKS_IN_ALL_DIR" == "Forced" ] || [ "$CREATE_SYMLINKS_IN_ALL_DIR" == "Empty-only" ] || [ "$CREATE_SYMLINKS_IN_ALL_DIR" == "Yes" ] # es posible que este if sea redundante
+       then
+         echo -n "Limpiando '$ALLPATH'.."
+         find "$ALLPATH" -mindepth 1 -delete && echo "OK" || { echo "ERROR al intentar borrar symlinks de '$ALLPATH'"; exit 1; }
+      fi
+   else
+      echo "directorio '$ALLPATH' vacío ..OK"
    fi
+   #echo "debug: "; ls "$ALLPATH"; echo "-"
    
-   echo "debug: "; ls "$ALLPATH"; echo "-"
-   find "$EVENPATH" -maxdepth 1 -type f -exec ln -s {} "$ALLPATH" \; 
-   find "$ODDPATH" -maxdepth 1 -type f -exec ln -s {} "$ALLPATH" \; 
+   if [ "$CREATE_SYMLINKS_IN_ALL_DIR" == "Yes" ] || [ "$CREATE_SYMLINKS_IN_ALL_DIR" == "Forced" ]
+    then
+
+      # create symlinks form 'odd' and 'even' in 'all'
+      if find "$EVENPATH" -mindepth 1 -name "temp.jpg" | grep -q .
+       then
+        rm "$EVENPATH/temp.jpg" && echo "- se eliminó el archivo temporal 'temp.jpg' de '$EVENPATH'" || exit 1
+      fi
+      if find "$ODDPATH" -mindepth 1 -name "temp.jpg" | grep -q .   
+       then
+        rm "$ODDPATH/temp.jpg" && echo "- se eliminó el archivo temporal 'temp.jpg' de '$ODDPATH'" || exit 1
+      fi
+
+      echo -n "Creando symlinks en '$ALLPATH'.."         
+      find "$EVENPATH" -maxdepth 1 -type f -exec ln -s {} "$ALLPATH" \; && echo -n "OK .." || { echo "ERROR al intentar crear symlinks desde '$EVENPATH'"; exit 1; }
+      find "$ODDPATH" -maxdepth 1 -type f -exec ln -s {} "$ALLPATH" \; &&  echo " OK" || { echo "ERROR al intentar crear symlinks desde '$ODDPATH'"; exit 1; }
+
+   fi  
 fi
 
 # --- profile-processor
 
 [[ -d "$LOGPATH" ]] || { mkdir "$LOGPATH" || { echo "No se pudo crear '$LOGPATH'"; exit 1; } }
 
-echo "Executing $SCRIPT"
+echo 
+echo "== Executing '"$( basename "$SCRIPT")"' =="
 
-$SCRIPT "src=$SOURCE" "wrk=$DEST" "log=$LOGPATH" $PARAM "name=$OUTPUT_NAME" "profile=a3"
+$SCRIPT "src=$SOURCE" "wrk=$DEST" "log=$LOGPATH" "ext=$EXT" $PARAM "name=$OUTPUT_NAME" "profile=a3" debug
 
 
