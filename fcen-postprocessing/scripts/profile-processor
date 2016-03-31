@@ -106,6 +106,8 @@ EXCLUDE_LIST=""
 IMGIMPROVE_LIST=""
 CLEAR=""
 SCANTAILOR_DISABLED=""
+INPUT_EXT=""
+DEBUG=""
 
 # ==================================== processing arguments ===================================
 
@@ -145,6 +147,9 @@ while [ $# -ne 0 ]
             ;;
         imgimprove=*)
             IMGIMPROVE_LIST="${arg#*=}"
+            ;;
+        debug)
+            DEBUG="Yes"
             ;;
         no-ocr)
             paramArr+=('tesseract-disabled')
@@ -203,6 +208,9 @@ fi
 [[ "$LOG_PATH" != "" ]] && paramArr+=("log=$LOG_PATH")
 [[ "$OUT_PATH" != "" ]] && paramArr+=("out=$OUT_PATH")
 
+if [ ! -z "$INPUT_EXT" ]
+ then paramArr+=("input-extension=$INPUT_EXT")
+fi
 
 # ====================================== process profiles =====================================
 
@@ -305,8 +313,7 @@ fi
 
 [[ "$TWOSTEPS" == "Yes" ]] && paramArr+=('pdfbeads-disabled')
 
-echo
-$DEBUG_PARAM "${paramArr[@]}" "${inclexclArr[@]}" 
+[[ "$DEBUG" == "Yes" ]] && { echo; $DEBUG_PARAM "${paramArr[@]}" "${inclexclArr[@]}"; }
 
 echo "|Step 1|"; echo
 $FPP_SCRIPT "${paramArr[@]}" "${inclexclArr[@]}" ; echo
@@ -368,7 +375,8 @@ fi
 # procesar por segunda vez (sólo las páginas con imágenes)
 
 echo "-----------"; echo
-$DEBUG_PARAM "${paramArr[@]}" "${inclexclArr[@]}" 
+
+[[ "$DEBUG" == "Yes" ]] && { echo; $DEBUG_PARAM "${paramArr[@]}" "${inclexclArr[@]}"; }
 
 echo "|Step 2|"; echo
 $FPP_SCRIPT "${paramArr[@]}" "${inclexclArr[@]}"; echo

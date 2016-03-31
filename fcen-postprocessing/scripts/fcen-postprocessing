@@ -170,8 +170,15 @@ do
             OUT_PDF_NAME="${arg#*=}"
             ;;
         input-extension=*)
-            INPUT_EXT="${arg#*=}"
-            INPUT_EXT=${INPUT_EXT//\*/} # remove '*' from string
+            if [ ! -z "${arg#*=}" ]
+             then
+              M="${M}$arg "
+              INPUT_EXT="${arg#*=}"
+              INPUT_EXT=${INPUT_EXT//\*/} # remove '*' from string
+              INPUT_EXT=${INPUT_EXT//\ /} # remove ' ' from string
+              INPUT_EXT=${INPUT_EXT//\,/\ \.} # replace ',' -> ' .'
+              INPUT_EXT=".$INPUT_EXT"
+            fi
             ;;
         scantailor-disabled)
             M="${M}scantailor-disabled "
@@ -363,6 +370,8 @@ STATS_PATH="$sSTATS_PATH-$fpr"
 LOG_PATH="$sLOG_PATH-$fpr"
 RENAMED_PATH="$sRENAMED_PATH-$fpr"
 
+CPU_INFO="${OUT_LOGS_DIR}/CPU_INFO"
+
 # ============================================================================
 #                          Clear & exit if "clear" option
 # ============================================================================
@@ -423,6 +432,10 @@ printf " Logs dir: $OUT_LOGS_DIR\n" ) >> "$LOG_PATH"
 cd "$SOURCE_DIR"
 
 declare -a srcFiles
+echo -n "Find "
+[[ -z "$INCLUDE_FILES" ]] && echo -n "all files " || echo -n "'$INCLUDE_FILES' "
+echo -n "with '$INPUT_EXT' extensions "
+
 #Todo: verificar funcionamiento include Y exclude a la vez
 if [ "$EXCLUDE_FILES" ]
  then
@@ -432,9 +445,11 @@ if [ "$EXCLUDE_FILES" ]
    get_filelist "exclFiles" "." "$INPUT_EXT" "$EXCLUDE_FILES"
    exclude_files "srcFiles" allFiles[@] exclFiles[@]
    unset allFiles exclFiles
+   echo -n "and excluding '$EXCLUDE_FILES' "
  else
    get_filelist "srcFiles" "." "$INPUT_EXT" "$INCLUDE_FILES"             #if INCLUDE_FILES == "" get_filelist get all files in dir
 fi
+echo -n "in '$SOURCE_DIR' ..${#srcFiles[@]} files obtained .."
 
 #alt method -> shopt -s nullglob; srcFiles=($INPUT_EXT); shopt -u nullglob;
 
@@ -442,10 +457,13 @@ if [ "$SCANTAILOR_ENABLED" == "Yes" ] || [ "$PRE_FILTER" == "Yes" ]
  then
   if [ -z $srcFiles ]
    then
+     echo ""
      echo "ERROR: no hay archivos para ser procesados por scantailor o pre-filtros en '$SOURCE_DIR'" | tee -a "$LOG_PATH"
      exit 0
   fi
 fi
+
+echo "done"
 
 # OJO este if da falso con array=('' foo)
 
@@ -505,7 +523,7 @@ if [ "$PRE_FILTER" == "Yes" ]
          let nFilter=nFilter+1
    done
 else
-   echo "no prefilter required"
+   echo "No prefilter required."
 fi
 
 # ============================================================================
@@ -534,7 +552,7 @@ then
 
    t=`date +%s`
 
-   echo -n "Scantailor processing"
+   echo -n "Scantailor processing.."
    eval $CMD_SCANTAILOR > >(tee -a "$LOG_PATH") 2> >(tee "$SCT_ERROR_PATH" >&2) | awk '{ printf "." }'; echo -n "done"
       # http://stackoverflow.com/questions/692000/how-do-i-write-stderr-to-a-file-while-using-tee-with-a-pipe
 
@@ -547,7 +565,7 @@ then
    echo
 
 else
-   echo "scantailor disabled"
+   echo "Scantailor disabled."
 fi
 
 # ============================================================================
@@ -579,9 +597,9 @@ then
      fi
    done
 
-   if [ "$RENAMING" == "Yes" ]; then echo "done"; else echo " - no file had to be renamed"; fi
+   if [ "$RENAMING" == "Yes" ]; then echo "done"; else echo " - No file had to be renamed."; fi
 else
-   echo "renaming disabled"
+   echo "Renaming disabled."
 fi
 
 # ============================================================================
@@ -662,7 +680,7 @@ then
    { [[ -f "$OCR_ERROR_PATH" ]] && [[ ! -s "$OCR_ERROR_PATH" ]]; } && { rm "$OCR_ERROR_PATH"; echo -n "No errors" ;}
    echo
 else
-   echo "tesseract disabled"
+   echo "Tesseract disabled."
 fi
 
 # ============================================================================
@@ -673,7 +691,7 @@ fi
 if [ "$PDFBEADS_CLEAR" == "Yes" ]
  then
   # ==== CLEAR PDFBEADS ===== ToDo: reemplazar por funcion get_filelist!
-  echo "CLEAR PDFBEADS "
+  echo "Clear PDFbeads "
   echo
   rmEXT='*.tiff *.jpg *.jbig2 *.sym'
   shopt -s nullglob; 
@@ -734,6 +752,7 @@ printf "PdfbeadsTime:   $PdfbeadsTime\n"
 printf "TotalTime:      $TotalTime\n"
 printf "AverageTime:    $AverageTime\n" ) | tee "$STATS_PATH" >> "$LOG_PATH"
 
+cat /proc/cpuinfo > "$CPU_INFO"
 
 # # [[ $str == *['!'@#\$%^\&*()_+]* ]]
 
