@@ -271,6 +271,16 @@ if [ "$SCANTAILOR_DISABLED" != "Yes" ]
            g2)
                paramArr+=('filter-invertlevels')
                ;;
+           q1) # forced color-mixed
+               paramArr_Del 'color-mode=black_and_white'
+               paramArr_Del 'color-mode=color_grayscale'
+               paramArr+=('color-mode=mixed')
+               ;;
+           q2) # forced color_grayscale
+               paramArr_Del 'color-mode=black_and_white'
+               paramArr_Del 'color-mode=mixed'
+               paramArr+=('color-mode=color_grayscale')
+               ;;
          esac
        done
    fi

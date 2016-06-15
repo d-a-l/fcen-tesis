@@ -28,7 +28,9 @@ CREATE_SYMLINKS_IN_ALL_DIR="Yes"
 PARAM="follow-symbolic-links"
 
 EXT="jpg,JPG,tif,TIF,jpeg,JPEG,TIFF,tiff"
-       
+
+PROFILE_OPTIONS=''
+
 # --- check directory tree structure
 
 [[ -d "$PROJPATH" ]] || { echo "El directorio proporcionado no existe: '$PROJPATH'"; exit 1; }
@@ -127,6 +129,32 @@ if [ -f "$DEST/$OUTPUT_NAME" ]
    esac
 fi
 
+echo "Seleccionar perfil de procesamiento"
+echo "- '1' + ENTER: blanco y negro (1bit)"
+echo "- '2' + ENTER: autodetectar imagenes en color o blanco y negro"
+echo "- '3' + ENTER: color o escala de grises"
+echo ""
+echo "- Presione ENTER "
+echo "    para salir sin hacer nada."
+read -p ">> " option
+case "$option" in
+    "")
+        exit 0
+        ;;
+    1)
+        PROFILE_OPTIONS=''
+        ;;
+    2)
+        PROFILE_OPTIONS=',q1'
+        ;;
+    2)
+        PROFILE_OPTIONS=',q2'
+        ;;
+    *)
+        exit 0
+        ;;
+esac
+
 # --- create symbolic links in all dir
 
 # find "$EVENPATH" -maxdepth 1 -type f -exec mv {} "$ALLPATH" \;
@@ -178,13 +206,13 @@ if [ "$CREATE_SYMLINKS_IN_ALL_DIR" != "No" ]
     then
 
       # create symlinks form 'odd' and 'even' in 'all'
-      if find "$EVENPATH" -mindepth 1 -name "temp.jpg" | grep -q .
+      if find "$EVENPATH" -mindepth 1 -name "test.jpg" | grep -q .
        then
-        rm "$EVENPATH/temp.jpg" && echo "- se eliminó el archivo temporal 'temp.jpg' de '$EVENPATH'" || exit 1
+        rm "$EVENPATH/test.jpg" && echo "- se eliminó el archivo de prueba 'test.jpg' de '$EVENPATH'" || exit 1
       fi
-      if find "$ODDPATH" -mindepth 1 -name "temp.jpg" | grep -q .   
+      if find "$ODDPATH" -mindepth 1 -name "test.jpg" | grep -q .   
        then
-        rm "$ODDPATH/temp.jpg" && echo "- se eliminó el archivo temporal 'temp.jpg' de '$ODDPATH'" || exit 1
+        rm "$ODDPATH/test.jpg" && echo "- se eliminó el archivo de prueba 'test.jpg' de '$ODDPATH'" || exit 1
       fi
 
       echo -n "Creando symlinks en '$ALLPATH'.."         
@@ -201,6 +229,6 @@ fi
 echo 
 echo "== Executing '"$( basename "$SCRIPT")"' =="
 
-$SCRIPT "src=$SOURCE" "wrk=$DEST" "log=$LOGPATH" "ext=$EXT" $PARAM "name=$OUTPUT_NAME" "profile=a3" debug
+$SCRIPT "src=$SOURCE" "wrk=$DEST" "log=$LOGPATH" "ext=$EXT" $PARAM "name=$OUTPUT_NAME" "profile=a3$PROFILE_OPTIONS" debug
 
 
