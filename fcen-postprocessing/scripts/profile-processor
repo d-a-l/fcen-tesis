@@ -151,6 +151,9 @@ while [ $# -ne 0 ]
         debug)
             DEBUG="Yes"
             ;;
+        scantailor-verbose)
+            paramArr+=('scantailor-verbose')
+            ;;
         no-ocr)
             paramArr+=('tesseract-disabled')
             ;;

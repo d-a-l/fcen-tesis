@@ -129,6 +129,7 @@ echo "== $me [$(date +%Y-%m-%d\ %T)] =="; echo
  SCANTAILOR_SEGM_CONTENT=""          # Scantailor detect page arguments
  SCANTAILOR_THRESHOLD="--threshold=0"  # Scantailor threshold arguments
  SCANTAILOR_ENABLED="Yes"
+ SCANTAILOR_VERBOSE=""
  
  # Tesseract
  TESSERACT_ARGS=""
@@ -183,6 +184,10 @@ do
         scantailor-disabled)
             M="${M}scantailor-disabled "
             SCANTAILOR_ENABLED="No"
+            ;;
+        scantailor-verbose)
+            M="${M}scantailor-verbose "
+            SCANTAILOR_VERBOSE="Yes"
             ;;
         tesseract-disabled)
             M="${M}tesseract-disabled "
@@ -551,9 +556,16 @@ then
    printf "[CMD]:\n $CMD_SCANTAILOR_EXPANDED \n" >> "$LOG_PATH"
 
    t=`date +%s`
-
-   echo -n "Scantailor processing.."
-   eval $CMD_SCANTAILOR > >(tee -a "$LOG_PATH") 2> >(tee "$SCT_ERROR_PATH" >&2) | awk '{ printf "." }'; echo -n "done"
+   if [ "$SCANTAILOR_VERBOSE" == "Yes" ]
+    then
+       echo -n "Scantailor processing"
+       eval stdbuf -i0 -o0 -e0 $CMD_SCANTAILOR > >(tee -a "$LOG_PATH") 2> >(tee "$SCT_ERROR_PATH" >&2)  | awk -W interactive '{ printf "." }'; echo -n "done"
+      # stdbuf -i0 -o0 -e0 http://unix.stackexchange.com/questions/25372/turn-off-buffering-in-pipe
+      # -W interactive http://unix.stackexchange.com/questions/33650/why-does-awk-do-full-buffering-when-reading-from-a-pipe
+   else
+        echo -n "Scantailor processing.."
+        eval $CMD_SCANTAILOR > >(tee -a "$LOG_PATH") 2> >(tee "$SCT_ERROR_PATH" >&2) | awk '{ printf "." }'; echo -n "done"
+   fi
       # http://stackoverflow.com/questions/692000/how-do-i-write-stderr-to-a-file-while-using-tee-with-a-pipe
 
    #eval $CMD_SCANTAILOR
@@ -729,7 +741,7 @@ then
 
    printf "[CMD]:\npdfbeads $PDFBEADS_ARGS *$TIFF_EXT > $OUT_PDF_DIR/$OUT_PDF_NAME\n" >> "$LOG_PATH"
    echo -n "PDFbeads processing"
-   (pdfbeads $PDFBEADS_ARGS *$TIFF_EXT >"$OUT_PDF_DIR/$OUT_PDF_NAME" 2> >(tee -a "$LOG_PATH" >&2)) 2>&1 | awk '{ printf "." }'
+   (pdfbeads $PDFBEADS_ARGS *$TIFF_EXT >"$OUT_PDF_DIR/$OUT_PDF_NAME" 2> >(tee -a "$LOG_PATH" >&2)) 2>&1 | awk -W interactive '{ printf "." }'
    echo -n "done"
    PdfbeadsTime=$(expr `date +%s` - $t); echo " - ${PdfbeadsTime}s";
 else
