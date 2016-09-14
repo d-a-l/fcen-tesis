@@ -4,10 +4,34 @@
 PROJPATH="${1%/}" #remove last slash if any
 PROJECT_NAME=$( basename "$PROJPATH" )
 
+shift
+
+NO_INTERACTIVE=""
+REPROCESS=""
+PROFILE_FROM_PARAM="1"
+
+while [ $# -ne 0 ]
+  do
+    arg="$1"
+    case "$arg" in
+        no-interactive)
+            NO_INTERACTIVE="Yes"
+            ;;
+        reprocess)
+            REPROCESS="Yes"
+            ;;
+        profile=*)
+            PROFILE_FROM_PARAM="${arg#*=}"
+            ;;
+    esac
+    shift
+  done  
+  
 echo "=== '$PROJECT_NAME' ==="
 echo ""
 
 SCRIPT="/opt/src/fcen-tesis/fcen-postprocessing/scripts/profile-processor"
+[[ -f "$SCRIPT" ]] && echo "profile-processor OK" || { echo "profile-processor FILE NOT FOUND"; exit 1;} 
 
 # --- configuration
 
@@ -18,7 +42,7 @@ ALLPATH="$PROJPATH/pre/all"
 SOURCE="$ALLPATH"
 DEST="$PROJPATH/done"
 LOGPATH="$PROJPATH/done/.logs"
-OUTPUT_NAME="documento.pdf"
+OUTPUT_NAME="output.pdf"
 
 PREV_SC=""
 PREV_OCR=""
@@ -65,79 +89,98 @@ if [ -d "$DEST/.processing" ]
     fi
 fi
 
-if [ -f "$DEST/$OUTPUT_NAME" ]
-  then
-   echo ""
-   echo "ATENCION: '$PROJECT_NAME' ya contiene un documento PDF probablemente"
-   echo "producido durante un post-procesamiento anterior."
-   echo ""
-   echo "¿Cómo desea continuar?"
-   echo "- Presione ENTER "
-   echo "    para salir sin hacer nada."
-   echo "- Presione '1' + ENTER"
-   echo "    para repetir TODO el proceso completo de generación del PDF desde las"
-   echo "    de capturas originales (post-procesado y realización de OCR)."
-   if [ "$PREV_SC" == "Yes" ]; then
-     echo "- Presione '2' + ENTER"
-     echo "    para re-procesar SOLO el OCR (reconocimiento de caracteres), usando"
-     echo "    usando el resto del material disponible para generar el PDF."
-   fi
-   if [ "$PREV_SC" == "Yes" ] && [ "$PREV_OCR" == "Yes" ]; then
-     echo "- Presione '3' + ENTER"
-     echo "    para volver a generar el PDF sin realizar nuevamente el post-procesado."
+if [ "$NO_INTERACTIVE" != "Yes" ]
+then
+    if [ -f "$DEST/$OUTPUT_NAME" ]
+      then
+       echo ""
+       echo "ATENCION: '$PROJECT_NAME' ya contiene un documento PDF probablemente"
+       echo "producido durante un post-procesamiento anterior."
+       echo ""
+       echo "¿Cómo desea continuar?"
+       echo "- Presione ENTER "
+       echo "    para salir sin hacer nada."
+       echo "- Presione '1' + ENTER"
+       echo "    para repetir TODO el proceso completo de generación del PDF desde las"
+       echo "    de capturas originales (post-procesado y realización de OCR)."
+       if [ "$PREV_SC" == "Yes" ]; then
+         echo "- Presione '2' + ENTER"
+         echo "    para re-procesar SOLO el OCR (reconocimiento de caracteres), usando"
+         echo "    el resto del material disponible para generar el PDF."
+       fi
+       if [ "$PREV_SC" == "Yes" ] && [ "$PREV_OCR" == "Yes" ]; then
+         echo "- Presione '3' + ENTER"
+         echo "    para volver a generar el PDF sin realizar nuevamente el post-procesado."
 
-   fi
+       fi
 
-   echo "- Presione '0' + ENTER"
-   echo "    para eliminar archivos producidos en post-procesados previos y salir"
-   echo ""   
-   read -p ">> " option
-   case "$option" in
-      "")
-         exit 0
-         ;;
-      1)
-         CREATE_SYMLINKS_IN_ALL_DIR="Forced" # solo evita que vuelva a pregunta que hacer mas adelante
-         ;;
-      2)
-         if [ "$PREV_SC" == "Yes" ] 
-         then 
-           PARAM="no-scantailor"; 
-           CREATE_SYMLINKS_IN_ALL_DIR="No"
-           if [ "$PREV_PDFB" == "Yes" ]; then PARAM="$PARAM reoptimize-pdf"; fi
-         else
-           exit 0
-         fi
-         ;;
-      3)
-         if [ "$PREV_OCR" == "Yes" ] 
+       echo "- Presione '0' + ENTER"
+       echo "    para eliminar archivos producidos en post-procesados previos y salir"
+       echo ""   
+       read -p ">> " option
+       case "$option" in
+          "")
+             exit 0
+             ;;
+          1)
+             CREATE_SYMLINKS_IN_ALL_DIR="Forced" # solo evita que vuelva a preguntar que hacer mas adelante
+             ;;
+          2)
+             if [ "$PREV_SC" == "Yes" ] 
+             then 
+               PARAM="no-scantailor"; 
+               CREATE_SYMLINKS_IN_ALL_DIR="No"
+               if [ "$PREV_PDFB" == "Yes" ]; then PARAM="$PARAM reoptimize-pdf"; fi
+             else
+               exit 0
+             fi
+             ;;
+          3)
+             if [ "$PREV_OCR" == "Yes" ] 
+             then
+               PARAM="compile-pdf-only"
+               CREATE_SYMLINKS_IN_ALL_DIR="No"
+               if [ "$PREV_PDFB" == "Yes" ]; then PARAM="$PARAM reoptimize-pdf"; fi
+             else
+               exit 0
+             fi
+             ;;
+          0)
+             PARAM="clear"
+             CREATE_SYMLINKS_IN_ALL_DIR="Empty-only"
+             ;;
+          *)
+             exit 0
+             ;;
+       esac
+    fi
+    
+    echo "Seleccionar perfil de procesamiento"
+    echo "- '1' + ENTER: blanco y negro (1bit)"
+    echo "- '2' + ENTER: autodetectar imagenes en color o blanco y negro"
+    echo "- '3' + ENTER: color o escala de grises"
+    echo ""
+    echo "- Presione ENTER "
+    echo "    para salir sin hacer nada."
+    read -p ">> " pr_option
+
+else # NO-INTERACTIVE MODE
+    if [ -f "$DEST/$OUTPUT_NAME" ]
+     then
+        if [ "$REPROCESS" != "Yes" ]
          then
-           PARAM="compile-pdf-only"
-           CREATE_SYMLINKS_IN_ALL_DIR="No"
-           if [ "$PREV_PDFB" == "Yes" ]; then PARAM="$PARAM reoptimize-pdf"; fi
-         else
-           exit 0
-         fi
-         ;;
-      0)
-         PARAM="clear"
-         CREATE_SYMLINKS_IN_ALL_DIR="Empty-only"
-         ;;
-      *)
-         exit 0
-         ;;
-   esac
+            echo " Este proyecto ya fue post-procesado previamente '$PROJECT_NAME'!"
+            echo " Para sobreescribir en modo no interactivo debe agregar el"
+            echo " parametro 'reprocess' a las opciones del script."
+            exit 0
+        fi
+    fi
+    CREATE_SYMLINKS_IN_ALL_DIR="Forced"
+    pr_option=$PROFILE_FROM_PARAM
 fi
 
-echo "Seleccionar perfil de procesamiento"
-echo "- '1' + ENTER: blanco y negro (1bit)"
-echo "- '2' + ENTER: autodetectar imagenes en color o blanco y negro"
-echo "- '3' + ENTER: color o escala de grises"
-echo ""
-echo "- Presione ENTER "
-echo "    para salir sin hacer nada."
-read -p ">> " option
-case "$option" in
+
+case "$pr_option" in
     "")
         exit 0
         ;;
@@ -155,7 +198,7 @@ case "$option" in
         ;;
 esac
 
-# --- create symbolic links in all dir
+# --- create symbolic links in "all" dir
 
 # find "$EVENPATH" -maxdepth 1 -type f -exec mv {} "$ALLPATH" \;
 # find "$ODDPATH" -maxdepth 1 -type f -exec mv {} "$ALLPATH" \;
@@ -229,6 +272,6 @@ fi
 echo 
 echo "== Executing '"$( basename "$SCRIPT")"' =="
 
-$SCRIPT "src=$SOURCE" "wrk=$DEST" "log=$LOGPATH" "ext=$EXT" $PARAM "name=$OUTPUT_NAME" "profile=a3$PROFILE_OPTIONS" debug
+$SCRIPT "src=$SOURCE" "wrk=$DEST" "log=$LOGPATH" "ext=$EXT" $PARAM "name=$OUTPUT_NAME" "profile=a3$PROFILE_OPTIONS" "debug" "scantailor-verbose"
 
-
+# ---- post-actions here!!!
