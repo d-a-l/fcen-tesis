@@ -129,8 +129,9 @@ echo "== $me [$(date +%Y-%m-%d\ %T)] =="; echo
  SCANTAILOR_SEGM_CONTENT=""          # Scantailor detect page arguments
  SCANTAILOR_THRESHOLD="--threshold=0"  # Scantailor threshold arguments
  SCANTAILOR_ENABLED="Yes"
- SCANTAILOR_VERBOSE=""
- 
+ PRETTY_FORMAT=""
+ SCANTAILOR_OUTPUT_PROJECT="Yes" # solo generar proyecto
+
  # Tesseract
  TESSERACT_ARGS=""
  TESSERACT_OVERWRITE="Yes"
@@ -140,10 +141,21 @@ echo "== $me [$(date +%Y-%m-%d\ %T)] =="; echo
  PDFBEADS_ARGS="-b JPEG"      # jpeg2 "-b JP2"
  PDFBEADS_ENABLED="Yes"
  PDFBEADS_CLEAR="No"
-
+ PDFBEADS_HOLDS_PROCFILES="No"
  #
  RENAMING_ENABLED="Yes"
  FIND_OPTIONS=""
+
+# PDF PageLayout (pdfbeads -P option) 
+# (Optional) A name object specifying the page layout shall be used when the document is opened:
+# SinglePage Display one page at a time
+# OneColumn Display the pages in one column
+# TwoColumnLeft Display the pages in two columns, with odd-numbered pages on the left
+# TwoColumnRight Display the pages in two columns, with odd-numbered pages on the right
+# TwoPageLeft(PDF 1.5) Display the pages two at a time, with odd-numbered pages on the left
+# TwoPageRight(PDF 1.5) Display the pages two at a time, with odd-numbered pages on the right
+# Default value: SinglePage.
+
 
 # ============================================================================
 #                         Processing input arguments
@@ -185,9 +197,17 @@ do
             M="${M}scantailor-disabled "
             SCANTAILOR_ENABLED="No"
             ;;
-        scantailor-verbose)
-            M="${M}scantailor-verbose "
-            SCANTAILOR_VERBOSE="Yes"
+        scantailor-output-project)
+            M="${M}scantailor-output-project "
+            SCANTAILOR_OUTPUT_PROJECT="Yes"
+            ;;
+        scantailor-project-path=*)
+            M="${M}scantailor-project-path=${arg#*=} "
+            SCANTAILOR_OUTPUT_PROJECT_PATH="${arg#*=}"
+            ;;
+        pretty-format)
+            M="${M}pretty-format "
+            PRETTY_FORMAT="Yes"
             ;;
         tesseract-disabled)
             M="${M}tesseract-disabled "
@@ -335,6 +355,18 @@ do
             M="${M}pdfbeads-clear "
             PDFBEADS_CLEAR="Yes"
             ;;
+        pdfbeads-holds-procfiles)
+            M="${M}pdfbeads-holds-procfiles "
+            PDFBEADS_HOLDS_PROCFILES="Yes"
+            ;;
+        pdfbeads-layout=*)
+            M="${M}pdfbeads-layout=${arg#*=} "
+            PDFBEADS_ARGS=$PDFBEADS_ARGS" --pagelayout ${arg#*=}"
+            ;;
+        pdfbeads-force)
+            M="${M}pdfbeads-force "
+            PDFBEADS_ARGS=$PDFBEADS_ARGS"  --force-update"
+            ;;
         follow-symbolic-links)
             M="${M}follow-symbolic-links "
             FIND_OPTIONS="-L"
@@ -358,6 +390,9 @@ done
 [[ -z "$OUT_PDF_DIR" ]] && OUT_PDF_DIR="${WORKING_BASE}"
 [[ -z "$OUT_PDF_NAME" ]] && OUT_PDF_NAME="tesis.pdf"
 
+# scantailor project file
+[[ -z "$SCANTAILOR_OUTPUT_PROJECT_PATH" ]] && SCANTAILOR_OUTPUT_PROJECT_PATH="$WORKING_BASE/$(basename "$OUT_PDF_NAME" ".pdf").scantailor"
+
 # Log paths
 fpr=$(date +%s)
 [[ -z "$OUT_LOGS_DIR" ]] && OUT_LOGS_DIR="${WORKING_BASE}"
@@ -376,6 +411,15 @@ LOG_PATH="$sLOG_PATH-$fpr"
 RENAMED_PATH="$sRENAMED_PATH-$fpr"
 
 CPU_INFO="${OUT_LOGS_DIR}/CPU_INFO"
+
+#pretty format
+if [ "$PRETTY_FORMAT" == "Yes" ]
+ then
+   PFbacksp="\b\b\b\b\b\b\b\b\b\b"
+   PFforwsp='          '
+   PFzero=' [ 00.00%]'
+   PFformat='[% 6.2f%%]'
+fi
 
 # ============================================================================
 #                          Clear & exit if "clear" option
@@ -551,15 +595,24 @@ then
 
    printf "\n============ SCANTAILOR ============\n" >> "$LOG_PATH"
 
-   CMD_SCANTAILOR='"$SE_BIN" -v $SCANTAILOR_LMODE $SCANTAILOR_SEGM_PAGE $SCANTAILOR_SEGM_CONTENT $SCANTAILOR_THRESHOLD $SCANTAILOR_CMODE "${stailorFiles[@]}" "$WORKING_BASE/$PROC_DIR/"'
+   if [ "$SCANTAILOR_OUTPUT_PROJECT" == "Yes" ]
+    then
+        SCANTAILOR_OUTPUT_PROJECT_OPT="--output-project=$SCANTAILOR_OUTPUT_PROJECT_PATH"
+   fi
+
+   CMD_SCANTAILOR='"$SE_BIN" -v $SCANTAILOR_LMODE $SCANTAILOR_SEGM_PAGE $SCANTAILOR_SEGM_CONTENT $SCANTAILOR_THRESHOLD $SCANTAILOR_CMODE "$SCANTAILOR_OUTPUT_PROJECT_OPT" "${stailorFiles[@]}" "$WORKING_BASE/$PROC_DIR/"'
    CMD_SCANTAILOR_EXPANDED=$(eval "echo $CMD_SCANTAILOR")
    printf "[CMD]:\n $CMD_SCANTAILOR_EXPANDED \n" >> "$LOG_PATH"
 
    t=`date +%s`
-   if [ "$SCANTAILOR_VERBOSE" == "Yes" ]
+   if [ "$PRETTY_FORMAT" == "Yes" ]
     then
-       echo -n "Scantailor processing"
-       eval stdbuf -i0 -o0 -e0 $CMD_SCANTAILOR > >(tee -a "$LOG_PATH") 2> >(tee "$SCT_ERROR_PATH" >&2)  | awk -W interactive '{ printf "." }'; echo -n "done"
+       echo -n "Scantailor processing $PFzero"
+       let stItems=${#stailorFiles[@]}*6+6
+       awkcom=""
+       eval stdbuf -i0 -o0 -e0 $CMD_SCANTAILOR > >(tee -a "$LOG_PATH") 2> >(tee "$SCT_ERROR_PATH" >&2)  | awk -W interactive 'BEGIN{ k=100/'"$stItems"'; b="'"$PFbacksp"'" } { printf("%s", b); printf(".'"$PFforwsp"'"); printf("%s '"$PFformat"'", b, i); i=i+k }'
+       printf $PFbacksp
+       echo -n " done"
       # stdbuf -i0 -o0 -e0 http://unix.stackexchange.com/questions/25372/turn-off-buffering-in-pipe
       # -W interactive http://unix.stackexchange.com/questions/33650/why-does-awk-do-full-buffering-when-reading-from-a-pipe
    else
@@ -633,7 +686,7 @@ if [ "$TESSERACT_ENABLED" == "Yes" ] #only for tesseract, pdfbeads process all e
       exclude_files "procFiles" allFiles[@] exclFiles[@]
       unset allFiles exclFiles
     else
-      get_filelist "procFiles" "." "$INPUT_EXT" "$INCLUDE_FILES"             #if INCLUDE_FILES == "" get_filelist get all files in dir
+      get_filelist "procFiles" "." "$INPUT_EXT" "$INCLUDE_FILES"          #if INCLUDE_FILES == "" get_filelist get all files in dir
    fi
 
    if [ -z $procFiles ]
@@ -651,17 +704,24 @@ if [ "$TESSERACT_ENABLED" == "Yes" ]
 then
    printf "\n============ TESSERACT =============\n" >> "$LOG_PATH"
 
-   echo -n "Tesseract processing"
+   echo -n "Tesseract processing ${PFzero}"
 
    t=`date +%s`; c=0
+   if [ "$PRETTY_FORMAT" == "Yes" ]
+    then
+      percent=0
+      if [[ ${#procFiles[@]} != 0 ]]
+        then
+          step=$(bc <<< "scale=2; 100/${#procFiles[@]}")
+       fi
+   fi
    for i in "${procFiles[@]}" 
    do 
       let c=c+1 
-
       if [ -f "`basename "$i" "$TIFF_EXT"`.html" ] && [ "$TESSERACT_OVERWRITE" != "Yes" ]
       then
          printf "[$c]:\n$i previous OCR exist and tesseract overwrite option is disabled\n" >> "$LOG_PATH";
-         echo -n "x" 
+         printf "${PFbacksp}x${PFforwsp}" 
       else
         CMD_TESSERACT='tesseract "$i" "`basename "$i" "$TIFF_EXT"`" -l spa $TESSERACT_ARGS hocr logfile'
         # about logfile -> https://github.com/tesseract-ocr/tesseract/blob/master/tessdata/configs/logfile
@@ -675,17 +735,25 @@ then
         out=$(cat "tesseract.log")
         if [ "$(echo "$out" | wc -l)" -gt "2" ] #two lines log or more (usual no error log is eg. "page0")
          then
-           echo -n "!"
+           printf "${PFbacksp}!${PFforwsp}"
            echo "- Warnings -" >> "$LOG_PATH"
            echo "file $c $i [$(date +%Y-%m-%d_%T)]:" >> "$OCR_ERROR_PATH"
            printf "$out\n\n" >> "$OCR_ERROR_PATH"
          else
-           echo -n "." 
+           printf "${PFbacksp}.${PFforwsp}" 
+        fi
+        
+        if [ "$PRETTY_FORMAT" == "Yes" ]
+         then
+           percent=$(bc <<< "$percent + $step")
+           printf "${PFbacksp}"
+           echo $percent | awk '{printf " '"$PFformat"'", $1}'
         fi
       fi
       
    done
-   echo -n "done"
+   printf "${PFbacksp}"
+   echo -n " done"
    TesseractTime=$(expr `date +%s` - $t); echo -n " - ${TesseractTime}s - $c pages";
    NumberOfPages=$c
 
@@ -723,30 +791,40 @@ if [ "$PDFBEADS_CLEAR" == "Yes" ]
 fi
 
 # statement: PDFBeads process does not comply with exclude/include param, process all existing .tif file in $PROC_DIR
+#            except 'pdfbeads-holds-procfiles' parameter is enabled
 
 if [ "$PDFBEADS_ENABLED" == "Yes" ]
 then
    printf "\n============ PDFBEADS ==============\n" >> "$LOG_PATH"
 
-   # note: pdfbeads bugs -> http://ssdigit.nothingisreal.com/2012/09/experiences-with-pdfbeads.html
-
-   #pdfbeadsFiles=(*.tif)
-   #CMD_PDFBEADS='pdfbeads $PDFBEADS_ARGS "${pdfbeadsFiles[@]}" > "$OUT_PDF_DIR/$OUT_PDF_NAME"'
-
-   #echo "[CMD]:"; echo $(eval "echo $CMD_PDFBEADS"); echo
-
    t=`date +%s`
 
-   # eval $CMD_PDFBEADS 2>&1 
+   if [[ "$PDFBEADS_HOLDS_PROCFILES" == "Yes" ]]
+    then
+       printf "[CMD]:\npdfbeads $PDFBEADS_ARGS ${procFiles[@]} > $OUT_PDF_DIR/$OUT_PDF_NAME\n" >> "$LOG_PATH"
+       echo -n "PDFbeads processing (holds procfiles)"
+       (pdfbeads $PDFBEADS_ARGS ${procFiles[@]} >"$OUT_PDF_DIR/$OUT_PDF_NAME" 2> >(tee -a "$LOG_PATH" >&2)) 2>&1 | awk -W interactive '{ printf "." }'
+       echo -n "done"
+   else
+       # note: pdfbeads bugs -> http://ssdigit.nothingisreal.com/2012/09/experiences-with-pdfbeads.html
 
-   printf "[CMD]:\npdfbeads $PDFBEADS_ARGS *$TIFF_EXT > $OUT_PDF_DIR/$OUT_PDF_NAME\n" >> "$LOG_PATH"
-   echo -n "PDFbeads processing"
-   (pdfbeads $PDFBEADS_ARGS *$TIFF_EXT >"$OUT_PDF_DIR/$OUT_PDF_NAME" 2> >(tee -a "$LOG_PATH" >&2)) 2>&1 | awk -W interactive '{ printf "." }'
-   echo -n "done"
+       #pdfbeadsFiles=(*.tif)
+       #CMD_PDFBEADS='pdfbeads $PDFBEADS_ARGS "${pdfbeadsFiles[@]}" > "$OUT_PDF_DIR/$OUT_PDF_NAME"'
+
+       #echo "[CMD]:"; echo $(eval "echo $CMD_PDFBEADS"); echo
+       # eval $CMD_PDFBEADS 2>&1 
+
+       printf "[CMD]:\npdfbeads $PDFBEADS_ARGS *$TIFF_EXT > $OUT_PDF_DIR/$OUT_PDF_NAME\n" >> "$LOG_PATH"
+       echo -n "PDFbeads processing"
+       (pdfbeads $PDFBEADS_ARGS *$TIFF_EXT >"$OUT_PDF_DIR/$OUT_PDF_NAME" 2> >(tee -a "$LOG_PATH" >&2)) 2>&1 | awk -W interactive '{ printf "." }'
+       echo -n "done"
+   fi
+   
    PdfbeadsTime=$(expr `date +%s` - $t); echo " - ${PdfbeadsTime}s";
 else
    echo "pdfbeads disabled"
 fi
+
 
 # ============================================================================
 # ============================================================================
