@@ -148,6 +148,9 @@ while [ $# -ne 0 ]
         imgimprove=*)
             IMGIMPROVE_LIST="${arg#*=}"
             ;;
+        sct=*)
+            SCT_NAME="${arg#*=}"
+            ;;
         debug)
             DEBUG="Yes"
             ;;
@@ -164,8 +167,18 @@ while [ $# -ne 0 ]
             paramArr+=('scantailor-disabled')
             SCANTAILOR_DISABLED="Yes"
             ;;
-        scantailor-output-project)
-            paramArr+=('scantailor-output-project')
+        scantailor-save-project)
+            paramArr+=('scantailor-save-project')
+            ;;
+        scantailor-load-project) # load project from sct=* or default scantailor project localization
+                                 # (same as pdf path/name but .scantailor extension)
+            paramArr+=('scantailor-load-project')
+            ;;
+        scantailor-process-and-exit)
+            paramArr+=("scantailor-process-and-exit")
+            ;;
+        scantailor-filters=*)
+            paramArr+=("scantailor-filters=${arg#*=}")
             ;;
         compile-pdf-only)
             paramArr+=('tesseract-disabled')
@@ -190,11 +203,22 @@ while [ $# -ne 0 ]
         follow-symbolic-links)
             paramArr+=('follow-symbolic-links')
             ;;
+        clear-tmp)
+            paramArr+=('clear-tmp')
+            CLEAR="Yes"
+            ;;
+        clear-pdf)
+            paramArr+=('clear-pdf')
+            CLEAR="Yes"
+            ;;
+        clear-scantailor)
+            paramArr+=('clear-scantailor')
+            CLEAR="Yes"
+            ;;
         clear)
             paramArr+=('clear')
             CLEAR="Yes"
             ;;
-
     esac
     shift
   done           
@@ -222,6 +246,7 @@ fi
 [[ "$WRK_PATH" != "" ]] && paramArr+=("wrk=$WRK_PATH")
 [[ "$LOG_PATH" != "" ]] && paramArr+=("log=$LOG_PATH")
 [[ "$OUT_PATH" != "" ]] && paramArr+=("out=$OUT_PATH")
+[[ "$SCT_NAME" != "" ]] && paramArr+=("sct=$SCT_NAME")
 
 if [ ! -z "$INPUT_EXT" ]
  then paramArr+=("input-extension=$INPUT_EXT")
@@ -295,6 +320,12 @@ if [ "$SCANTAILOR_DISABLED" != "Yes" ]
                paramArr_Del 'color-mode=black_and_white'
                paramArr_Del 'color-mode=mixed'
                paramArr+=('color-mode=color_grayscale')
+               ;;
+           q3) # forced color_grayscale normalize illumination
+               paramArr_Del 'color-mode=black_and_white'
+               paramArr_Del 'color-mode=mixed'
+               paramArr+=('color-mode=color_grayscale')
+               paramArr+=('normalize-illumination')
                ;;
          esac
        done
