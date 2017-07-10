@@ -282,6 +282,24 @@ if [ "$SCANTAILOR_DISABLED" != "Yes" ]
            a3)
                paramArr+=('layout-oneandhalf')
                ;;
+           a4)
+               paramArr+=('layout-oneandhalf') # --enable-page-detection --enable-fine-tuning in fcen-postprocessing
+               paramArr+=('layout-disable-match-pages')
+               ;;
+           a5)
+               paramArr+=('layout-oneandhalf') # --enable-page-detection --enable-fine-tuning in fcen-postprocessing
+               paramArr_Del 'content-detection-disabled'
+               paramArr+=('enable-auto-margins')
+               paramArr+=('content-detection=normal')
+               paramArr+=('layout-disable-match-pages')
+               ;;
+           a6)
+               paramArr+=('layout-oneandhalf') # --enable-page-detection --enable-fine-tuning in fcen-postprocessing
+               paramArr_Del 'content-detection-disabled'
+               paramArr+=('enable-auto-margins')
+               paramArr+=('content-detection=normal')
+               paramArr+=('layout-match-pages-tolerance=0')
+               ;;
            b1)
                paramArr+=('filter-hpass-background')
                ;;

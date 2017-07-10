@@ -127,6 +127,8 @@ echo "== $me [$(date +%Y-%m-%d\ %T)] =="; echo
  SCANTAILOR_CMODE=""         # Scantailor color mode arguments
  SCANTAILOR_SEGM_PAGE=""          # Scantailor detect page arguments
  SCANTAILOR_SEGM_CONTENT=""          # Scantailor detect page arguments
+ SCANTAILOR_MATCH_PAGES=""
+ MATCH_TOLERANCE=""
  SCANTAILOR_THRESHOLD="--threshold=0"  # Scantailor threshold arguments
  SCANTAILOR_ENABLED="Yes"
  PRETTY_FORMAT=""
@@ -279,6 +281,22 @@ do
             M="${M}layout-disable-page-detection "
             #SCANTAILOR_LMODE=""
             SCANTAILOR_SEGM_PAGE=""
+            ;;
+        layout-match-pages-tolerance=*)
+            MATCH_TOLERANCE="${arg#*=}"
+            M="${M}layout-match-pages-tolerance=$MATCH_TOLERANCE "
+            SCANTAILOR_MATCH_PAGES="--match-layout-tolerance=$MATCH_TOLERANCE "  
+            ;;
+        layout-disable-match-pages)
+            M="${M}layout-disable-match-pages "
+            #SCANTAILOR_LMODE=""
+            # SCANTAILOR_MATCH_PAGES="--match-layout=false " 
+            SCANTAILOR_MATCH_PAGES="--match-layout-default=false "
+	           # --match-layout=<true|false>		-- default: true
+               # --match-layout-tolerance=<0.0...)	-- default: off
+               # --match-layout-default=<true|false>	-- default: true
+               # Setting it to 0 is equal to uncheck "match size with other pages" for all pages. 
+               # Value about 0.2 should keep similar pages matched and pages with different shape unmatched.  
             ;;
         content-detection=*)
             # cautious|normal|aggressive - default: normal
@@ -701,6 +719,7 @@ then
        CMD_SCANTAILOR+='$SCANTAILOR_LMODE '
        CMD_SCANTAILOR+='$SCANTAILOR_SEGM_PAGE '
        CMD_SCANTAILOR+='$SCANTAILOR_SEGM_CONTENT '
+       CMD_SCANTAILOR+='$SCANTAILOR_MATCH_PAGES'
        CMD_SCANTAILOR+='$SCANTAILOR_THRESHOLD '
        CMD_SCANTAILOR+='$SCANTAILOR_CMODE '
        [[ "$SCANTAILOR_SAVE_PROJECT_MODE" == "Yes" ]] &&
