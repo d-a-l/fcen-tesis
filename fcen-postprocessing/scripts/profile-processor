@@ -45,11 +45,11 @@ expandDash () {
   local toExpand="$1"
   local -a valArr
   local min max prefix digits i j out
-   
+
   IFS="-" read -ra valArr <<< "$toExpand"
-  
+
   [[ "${valArr[1]}" == "" ]] && return 0
-  
+
   min=${valArr[0]//[^0-9]/}
   max=${valArr[1]//[^0-9]/}
   prefix=${valArr[0]//[0-9]/}
@@ -59,13 +59,13 @@ expandDash () {
   max=$((10#$max))
 
   [[ "$min" -gt "$max" ]] && return 0
-  
+
   for (( i = $min ; i <= $max ; i++ ))
-    do 
+    do
       j=$(printf "%0${digits}d" "$i")
       out="$out""$prefix""$j"","
     done
-    
+
   out="${out%,}"           #remove last ','
   echo "$out"
 }
@@ -75,7 +75,7 @@ processLists () {
   local string="$1"
   local s t out
   local -a tmpArr
-  
+
   IFS="," read -ra tmpArr <<< "$string"
 
   out=""; for s in "${tmpArr[@]}"
@@ -221,7 +221,7 @@ while [ $# -ne 0 ]
             ;;
     esac
     shift
-  done           
+  done
 
 # ======================================= config paths ========================================
 
@@ -269,7 +269,7 @@ if [ "$SCANTAILOR_DISABLED" != "Yes" ]
       paramArr+=('content-detection-disabled')
       paramArr+=("color-mode=black_and_white")
       paramArr+=('picture-shape=rectangular')
- 
+
       for profile in "${profileArr[@]}"
        do
          case "$profile" in
@@ -286,7 +286,7 @@ if [ "$SCANTAILOR_DISABLED" != "Yes" ]
                paramArr+=('filter-hpass-background')
                ;;
            b2)
-               # ToDo 
+               # ToDo
                ;;
            c1)
                paramArr+=('bolder-text-aggressive')
@@ -327,6 +327,22 @@ if [ "$SCANTAILOR_DISABLED" != "Yes" ]
                paramArr+=('color-mode=color_grayscale')
                paramArr+=('normalize-illumination')
                ;;
+            # p1) # escaner plano: color_grayscale / margins
+            #   paramArr_Del 'color-mode=black_and_white'
+            #   paramArr_Del 'color-mode=mixed'
+            #   paramArr+=('color-mode=color_grayscale')
+            #   #paramArr+=('enable-fine-tuning') #ya estan por defecto
+            #   #paramArr+=('enable-page-detection') #ya estan por defecto
+            #   paramArr+=('margins=6')
+            #      # las siguientes implementar en fcen-postprocessing
+            #   # paramArr+=('match-layout=false')
+            #   # paramArr+=('alignment=center')
+            #   # paramArr+=('dpi=400')
+            #   ;;
+            # y1) # 'clasico' de diybookscanner, margen minimo
+            #   paramArr_Del 'content-detection-disabled'
+            #   paramArr+=('content-detection-default')
+            #   ;;
          esac
        done
    fi
