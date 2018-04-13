@@ -194,6 +194,9 @@ while [ $# -ne 0 ]
         pdfbeads-holds-procfiles)
             paramArr+=('pdfbeads-holds-procfiles')
             ;;
+        pdfbeads-quality=*)
+            paramArr+=("pdfbeads-quality=${arg#*=}")
+            ;;
         pdf-layout=*)
             paramArr+=("pdfbeads-layout=${arg#*=}")
             ;;

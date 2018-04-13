@@ -88,8 +88,10 @@ echo "== $me [$(date +%Y-%m-%d\ %T)] =="; echo
 # Paths to executables
 
  SE_BIN="/opt/src/scantailor-enhanced/scantailor-cli" #Scantailor enhanced exec path
+ PB_BIN="/opt/src/pdfbeads-kopi/bin/pdfbeads" #Pdfbeads enhanced
 
 [[ -f $SE_BIN ]] && echo "scantailor-enhanced bin path ok" || { echo "scantailor-enhanced no se encuentra en la ruta por defecto"; exit 1; }
+[[ -f $PB_BIN ]] && echo "pdfbeads-kopi bin path ok" || { echo "pdfbeads-kopi no se encuentra en la ruta por defecto, se usará 'pdfbeads'"; PB_BIN="pdfbeads"; }
 
  FILTER_BIN_DIR="$( dirname "${BASH_SOURCE[0]}" )/filters" #"~/bin/filters" /imagemagick/hpass
 
@@ -400,6 +402,10 @@ do
         pdfbeads-force)
             M="${M}pdfbeads-force "
             PDFBEADS_ARGS=$PDFBEADS_ARGS"  --force-update"
+            ;;
+        pdfbeads-quality=*)
+            M="${M}pdfbeads-quality=${arg#*=} "
+            PDFBEADS_ARGS=$PDFBEADS_ARGS" -q ${arg#*=} "
             ;;
         follow-symbolic-links)
             M="${M}follow-symbolic-links "
@@ -927,7 +933,7 @@ then
     then
        printf "[CMD]:\npdfbeads $PDFBEADS_ARGS ${procFiles[@]} > $OUT_PDF_DIR/$OUT_PDF_NAME\n" >> "$LOG_PATH"
        echo -n "PDFbeads processing (holds procfiles)"
-       (pdfbeads $PDFBEADS_ARGS ${procFiles[@]} >"$OUT_PDF_DIR/$OUT_PDF_NAME" 2> >(tee -a "$LOG_PATH" >&2)) 2>&1 | awk -W interactive '{ printf "." }'
+       ($PB_BIN $PDFBEADS_ARGS ${procFiles[@]} >"$OUT_PDF_DIR/$OUT_PDF_NAME" 2> >(tee -a "$LOG_PATH" >&2)) 2>&1 | awk -W interactive '{ printf "." }'
        echo -n "done"
    else
        # note: pdfbeads bugs -> http://ssdigit.nothingisreal.com/2012/09/experiences-with-pdfbeads.html
@@ -940,7 +946,7 @@ then
 
        printf "[CMD]:\npdfbeads $PDFBEADS_ARGS *$TIFF_EXT > $OUT_PDF_DIR/$OUT_PDF_NAME\n" >> "$LOG_PATH"
        echo -n "PDFbeads processing"
-       (pdfbeads $PDFBEADS_ARGS *$TIFF_EXT >"$OUT_PDF_DIR/$OUT_PDF_NAME" 2> >(tee -a "$LOG_PATH" >&2)) 2>&1 | awk -W interactive '{ printf "." }'
+       ($PB_BIN $PDFBEADS_ARGS *$TIFF_EXT >"$OUT_PDF_DIR/$OUT_PDF_NAME" 2> >(tee -a "$LOG_PATH" >&2)) 2>&1 | awk -W interactive '{ printf "." }'
        echo -n "done"
    fi
 
