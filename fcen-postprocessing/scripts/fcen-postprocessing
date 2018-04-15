@@ -199,6 +199,12 @@ do
             M="${M}sct-path=${arg#*=} "
             SCT_NAME="${arg#*=}"
             ;;
+        processing_name=*)
+            PROC_DIR="${arg#*=}"
+            ;;
+        preprocessing_name=*)
+            PREPROC_DIR="${arg#*=}"
+            ;;
         input-extension=*)
             if [ ! -z "${arg#*=}" ]
              then
@@ -443,7 +449,7 @@ done
 
 # scantailor project file
 [[ -z "$SCT_NAME" ]] && SCT_NAME="${OUT_PDF_NAME%.*}.scantailor"
-SCANTAILOR_PROJECT_PATH="${OUT_PDF_DIR}/${SCT_NAME}"
+SCANTAILOR_PROJECT_PATH="${WORKING_BASE}/${SCT_NAME}"
 
 # Log paths
 fpr=$(date +%s)

@@ -101,6 +101,8 @@ LOG_PATH=""
 OUT_PATH=""
 PROFILE_LIST=""
 DIR_PATH=""
+PROCESSING_NAME=""
+PREPROCESSING_NAME=""
 INCLUDE_LIST=""
 EXCLUDE_LIST=""
 IMGIMPROVE_LIST=""
@@ -150,6 +152,12 @@ while [ $# -ne 0 ]
             ;;
         sct=*)
             SCT_NAME="${arg#*=}"
+            ;;
+        processing_name=*)
+            PROCESSING_NAME="${arg#*=}"
+            ;;
+        preprocessing_name=*)
+            PREPROCESSING_NAME="${arg#*=}"
             ;;
         debug)
             DEBUG="Yes"
@@ -250,6 +258,9 @@ fi
 [[ "$LOG_PATH" != "" ]] && paramArr+=("log=$LOG_PATH")
 [[ "$OUT_PATH" != "" ]] && paramArr+=("out=$OUT_PATH")
 [[ "$SCT_NAME" != "" ]] && paramArr+=("sct=$SCT_NAME")
+
+[[ "$PROCESSING_NAME" != "" ]] && paramArr+=("processing_name=$PROCESSING_NAME")
+[[ "$PREPROCESSING_NAME" != "" ]] && paramArr+=("preprocessing_name=$PREPROCESSING_NAME")
 
 if [ ! -z "$INPUT_EXT" ]
  then paramArr+=("input-extension=$INPUT_EXT")
