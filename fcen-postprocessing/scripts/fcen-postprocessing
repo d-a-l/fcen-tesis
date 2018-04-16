@@ -158,6 +158,7 @@ echo "== $me [$(date +%Y-%m-%d\ %T)] =="; echo
  #
  RENAMING_ENABLED="Yes"
  FIND_OPTIONS=""
+ # AWKWI='-W interactive'
 
 # PDF PageLayout (pdfbeads -P option)
 # (Optional) A name object specifying the page layout shall be used when the document is opened:
@@ -735,11 +736,11 @@ then
           let SC_X_FILTERS=6 ;
        let stItems=${#stailorFiles[@]}*${SC_X_FILTERS}+${SC_X_FILTERS}
        awkcom=""
-       eval stdbuf -i0 -o0 -e0 $CMD_SCANTAILOR > >(tee -a "$LOG_PATH") 2> >(tee "$SCT_ERROR_PATH" >&2)  | awk -W interactive 'BEGIN{ k=100/'"$stItems"'; b="'"$PFbacksp"'" } { printf("%s", b); printf(".'"$PFforwsp"'"); printf("%s '"$PFformat"'", b, i); i=i+k }'
+       eval stdbuf -i0 -o0 -e0 $CMD_SCANTAILOR > >(tee -a "$LOG_PATH") 2> >(tee "$SCT_ERROR_PATH" >&2)  | awk $AWKWI 'BEGIN{ k=100/'"$stItems"'; b="'"$PFbacksp"'" } { printf("%s", b); printf(".'"$PFforwsp"'"); printf("%s '"$PFformat"'", b, i); i=i+k }'
        printf $PFbacksp
        echo -n " done"
       # stdbuf -i0 -o0 -e0 http://unix.stackexchange.com/questions/25372/turn-off-buffering-in-pipe
-      # -W interactive http://unix.stackexchange.com/questions/33650/why-does-awk-do-full-buffering-when-reading-from-a-pipe
+      # $AWKWI http://unix.stackexchange.com/questions/33650/why-does-awk-do-full-buffering-when-reading-from-a-pipe
    else
         echo -n "Scantailor processing.."
         eval $CMD_SCANTAILOR > >(tee -a "$LOG_PATH") 2> >(tee "$SCT_ERROR_PATH" >&2) | awk '{ printf "." }'; echo -n "done"
@@ -822,7 +823,7 @@ if [ "$TESSERACT_ENABLED" == "Yes" ] || [ "$PDFBEADS_ENABLED" == "Yes" ]
        exclude_files "procFiles" allFiles[@] exclFiles[@]
        unset allFiles exclFiles
     else
-       get_filelist "procFiles" "." "$INPUT_EXT" "$INCLUDE_FILES"          #if INCLUDE_FILES == "" get_filelist get all files in dir
+       get_filelist "procFiles" "." "$TIFF_EXT" "$INCLUDE_FILES"          #if INCLUDE_FILES == "" get_filelist get all files in dir
     fi
 
     if [ -z $procFiles ]
@@ -865,7 +866,7 @@ then
         CMD_TESSERACT_EXPANDED=$(eval "echo $CMD_TESSERACT")
         printf "[$c]:\n$CMD_TESSERACT_EXPANDED\n" >> "$LOG_PATH";
 
-        d=`date +%s`; eval $CMD_TESSERACT 1>/dev/null # 1>/dev/null = quiet exec
+        d=`date +%s`; eval $CMD_TESSERACT &>/dev/null # 1>/dev/null = quiet exec
         printf "Time: "$(expr `date +%s` - $d)"s\n" >> "$LOG_PATH"
 
         [[ -f "tesseract.log" ]] && out=$(cat "tesseract.log") || out=""
@@ -939,7 +940,7 @@ then
     then
        printf "[CMD]:\npdfbeads $PDFBEADS_ARGS ${procFiles[@]} > $OUT_PDF_DIR/$OUT_PDF_NAME\n" >> "$LOG_PATH"
        echo -n "PDFbeads processing (holds procfiles)"
-       ($PB_BIN $PDFBEADS_ARGS ${procFiles[@]} >"$OUT_PDF_DIR/$OUT_PDF_NAME" 2> >(tee -a "$LOG_PATH" >&2)) 2>&1 | awk -W interactive '{ printf "." }'
+       ($PB_BIN $PDFBEADS_ARGS ${procFiles[@]} >"$OUT_PDF_DIR/$OUT_PDF_NAME" 2> >(tee -a "$LOG_PATH" >&2)) 2>&1 | awk $AWKWI '{ printf "." }'
        echo -n "done"
    else
        # note: pdfbeads bugs -> http://ssdigit.nothingisreal.com/2012/09/experiences-with-pdfbeads.html
@@ -952,7 +953,7 @@ then
 
        printf "[CMD]:\npdfbeads $PDFBEADS_ARGS *$TIFF_EXT > $OUT_PDF_DIR/$OUT_PDF_NAME\n" >> "$LOG_PATH"
        echo -n "PDFbeads processing"
-       ($PB_BIN $PDFBEADS_ARGS *$TIFF_EXT >"$OUT_PDF_DIR/$OUT_PDF_NAME" 2> >(tee -a "$LOG_PATH" >&2)) 2>&1 | awk -W interactive '{ printf "." }'
+       ($PB_BIN $PDFBEADS_ARGS *$TIFF_EXT >"$OUT_PDF_DIR/$OUT_PDF_NAME" 2> >(tee -a "$LOG_PATH" >&2)) 2>&1 | awk $AWKWI '{ printf "." }'
        echo -n "done"
    fi
 
@@ -960,7 +961,6 @@ then
 else
    echo "pdfbeads disabled"
 fi
-
 
 # ============================================================================
 # ============================================================================
