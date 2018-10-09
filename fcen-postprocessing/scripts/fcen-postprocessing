@@ -368,6 +368,11 @@ do
             M="${M}only-text-justified "
             TESSERACT_ARGS="-psm 6"
             ;;
+        filter=*)
+            M="${M}filter=${arg#*=} "
+            filter_cmd="${arg#*=}"
+            FilterBinArr+=("$filter_cmd") # /path/to/command [optional paramenters] {{infile}} [more optional paramenters] {{outfile}} [idem]
+            ;;
         filter-hpass-background)
             M="${M}filter-hpass-background "
             PRE_FILTER="Yes"
@@ -641,7 +646,14 @@ if [ "$PRE_FILTER" == "Yes" ]
             let c=c+1
 
             outfile="${infile%.*}$TIFF_EXT"
-            CMD_FILTER='$FilterBin "$infile" "$filterOutDir/$outfile"'
+            if echo "$FilterBin" | grep -qE "\{\{([^\}]+)\}\}"
+             then
+               CMD_FILTER="$FilterBin"
+               CMD_FILTER=${CMD_FILTER/\{\{infile\}\}/\"\$infile\"}
+               CMD_FILTER=${CMD_FILTER/\{\{outfile\}\}/\"\$filterOutDir\/\$outfile\"}              
+            else
+               CMD_FILTER='$FilterBin "$infile" "$filterOutDir/$outfile"'
+            fi
             CMD_FILTER_EXPANDED=$(eval "echo $CMD_FILTER")
 
             #echo "$CMD_FILTER_EXPANDED"
@@ -938,7 +950,7 @@ then
 
    if [[ "$PDFBEADS_HOLDS_PROCFILES" == "Yes" ]]
     then
-       printf "[CMD]:\npdfbeads $PDFBEADS_ARGS ${procFiles[@]} > $OUT_PDF_DIR/$OUT_PDF_NAME\n" >> "$LOG_PATH"
+       printf "[CMD]:\n$PB_BIN $PDFBEADS_ARGS ${procFiles[@]} > $OUT_PDF_DIR/$OUT_PDF_NAME\n" >> "$LOG_PATH"
        echo -n "PDFbeads processing (holds procfiles)"
        ($PB_BIN $PDFBEADS_ARGS ${procFiles[@]} >"$OUT_PDF_DIR/$OUT_PDF_NAME" 2> >(tee -a "$LOG_PATH" >&2)) 2>&1 | awk $AWKWI '{ printf "." }'
        echo -n "done"
@@ -951,7 +963,7 @@ then
        #echo "[CMD]:"; echo $(eval "echo $CMD_PDFBEADS"); echo
        # eval $CMD_PDFBEADS 2>&1
 
-       printf "[CMD]:\npdfbeads $PDFBEADS_ARGS *$TIFF_EXT > $OUT_PDF_DIR/$OUT_PDF_NAME\n" >> "$LOG_PATH"
+       printf "[CMD]:\n$PB_BIN $PDFBEADS_ARGS *$TIFF_EXT > $OUT_PDF_DIR/$OUT_PDF_NAME\n" >> "$LOG_PATH"
        echo -n "PDFbeads processing"
        ($PB_BIN $PDFBEADS_ARGS *$TIFF_EXT >"$OUT_PDF_DIR/$OUT_PDF_NAME" 2> >(tee -a "$LOG_PATH" >&2)) 2>&1 | awk $AWKWI '{ printf "." }'
        echo -n "done"
