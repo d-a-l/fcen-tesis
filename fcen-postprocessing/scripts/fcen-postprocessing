@@ -87,8 +87,12 @@ echo "== $me [$(date +%Y-%m-%d\ %T)] =="; echo
 
 # Paths to executables
 
- SE_BIN="/opt/src/scantailor-enhanced/scantailor-cli" #Scantailor enhanced exec path
- PB_BIN="/opt/src/pdfbeads-kopi/bin/pdfbeads" #Pdfbeads enhanced
+# SE_BIN="/opt/src/scantailor-enhanced/scantailor-cli" #Scantailor enhanced exec path
+# PB_BIN="/opt/src/pdfbeads-kopi/bin/pdfbeads" #Pdfbeads enhanced
+
+ SE_BIN="/opt/bibliohack/components/scantailor-universal/scantailor-cli" #Scantailor enhanced exec path
+ PB_BIN="/opt/bibliohack/components/pdfbeads-kopi/bin/pdfbeads" #Pdfbeads enhanced
+
 
 [[ -f $SE_BIN ]] && echo "scantailor-enhanced bin path ok" || { echo "scantailor-enhanced no se encuentra en la ruta por defecto"; exit 1; }
 [[ -f $PB_BIN ]] && echo "pdfbeads-kopi bin path ok" || { echo "pdfbeads-kopi no se encuentra en la ruta por defecto, se usará 'pdfbeads'"; PB_BIN="pdfbeads"; }
