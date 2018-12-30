@@ -110,6 +110,7 @@ CLEAR=""
 SCANTAILOR_DISABLED=""
 INPUT_EXT=""
 DEBUG=""
+PRESCFILTER_CMDS=""
 
 # ==================================== processing arguments ===================================
 
@@ -225,6 +226,13 @@ while [ $# -ne 0 ]
         clear-scantailor)
             paramArr+=('clear-scantailor')
             CLEAR="Yes"
+            ;;
+        presc-filter=*)
+            PRESCFILTER_CMDS="${arg#*=}"
+            # filter_cmd = /path/to/command [optional paramenters] {{infile}} [more optional paramenters] {{outfile}} [idem]
+            if [ "$PRESCFILTER_CMDS" != "" ]; then
+               paramArr+=("presc-filter=$PRESCFILTER_CMDS")
+            fi
             ;;
         clear)
             paramArr+=('clear')

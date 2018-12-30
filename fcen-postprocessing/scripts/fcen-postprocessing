@@ -368,10 +368,11 @@ do
             M="${M}only-text-justified "
             TESSERACT_ARGS="-psm 6"
             ;;
-        filter=*)
-            M="${M}filter=${arg#*=} "
+        presc-filter=*)
             filter_cmd="${arg#*=}"
-            FilterBinArr+=("$filter_cmd") # /path/to/command [optional paramenters] {{infile}} [more optional paramenters] {{outfile}} [idem]
+            M="${M}filter=$filter_cmd "
+            IFS=";" read -ra PrescfiltercmdArr <<< "$filter_cmd"
+            # /path/to/command1 [optional paramenters] {{infile}} [more optional paramenters] {{outfile}} [idem];/path/to/command2 ... etc
             ;;
         filter-hpass-background)
             M="${M}filter-hpass-background "
@@ -628,6 +629,11 @@ if [ "$PRE_FILTER" == "Yes" ]
    filterOutDir="$SOURCE_DIR"
    filterFiles=("${srcFiles[@]}")
 
+   if [ ! -z "$PrescfiltercmdArr"]
+    then
+      FilterBinArr=("${PrescfiltercmdArr[@]}" "${FilterBinArr[@]}")
+   fi
+   
    for FilterBin in "${FilterBinArr[@]}"
     do
          echo -n "Prefiltering-$nFilter ${FilterBin##*/}"
@@ -650,7 +656,7 @@ if [ "$PRE_FILTER" == "Yes" ]
              then
                CMD_FILTER="$FilterBin"
                CMD_FILTER=${CMD_FILTER/\{\{infile\}\}/\"\$infile\"}
-               CMD_FILTER=${CMD_FILTER/\{\{outfile\}\}/\"\$filterOutDir\/\$outfile\"}              
+               CMD_FILTER=${CMD_FILTER/\{\{outfile\}\}/\"\$filterOutDir\/\$outfile\"}
             else
                CMD_FILTER='$FilterBin "$infile" "$filterOutDir/$outfile"'
             fi
@@ -832,7 +838,7 @@ if [ "$TESSERACT_ENABLED" == "Yes" ] || [ "$PDFBEADS_ENABLED" == "Yes" ]
        get_filelist "allFiles" "." "$TIFF_EXT" "$INCLUDE_FILES" #antes era ''. testear!!
        declare -a exclFiles
        get_filelist "exclFiles" "." "$TIFF_EXT" "$EXCLUDE_FILES"
-       exclude_files "procFiles" allFiles[@] exclFiles[@]
+         exclude_files "procFiles" allFiles[@] exclFiles[@]
        unset allFiles exclFiles
     else
        get_filelist "procFiles" "." "$TIFF_EXT" "$INCLUDE_FILES"          #if INCLUDE_FILES == "" get_filelist get all files in dir
