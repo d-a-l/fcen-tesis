@@ -1,5 +1,10 @@
 #!/bin/bash
 
+OWN_DIR="$(dirname "$0")"
+cd "$OWN_DIR"
+PWDIR="$(pwd -P)"
+cd "$PWDIR"
+
 # ============================================================================
 #                                  FUNCTIONS
 # ============================================================================
@@ -90,12 +95,13 @@ echo "== $me [$(date +%Y-%m-%d\ %T)] =="; echo
  SE_BIN="/opt/src/scantailor-enhanced/scantailor-cli" #Scantailor enhanced exec path
  PB_BIN="/opt/src/pdfbeads-kopi/bin/pdfbeads" #Pdfbeads enhanced
 
-if [[ -f ./COMPONENTS ]]; then
-   . ./COMPONENTS
+if [[ -f COMPONENTS ]]; then
+   echo "cargando Paths desde COMPONENTS"
+   . COMPONENTS
 fi
 
-[[ -f $SE_BIN ]] && echo "scantailor-enhanced bin path ok" || { echo "scantailor-enhanced no se encuentra en la ruta por defecto"; exit 1; }
-[[ -f $PB_BIN ]] && echo "pdfbeads-kopi bin path ok" || { echo "pdfbeads-kopi no se encuentra en la ruta por defecto, se usará 'pdfbeads'"; PB_BIN="pdfbeads"; }
+[[ -f $SE_BIN ]] && echo "scantailor bin path ok: '$SE_BIN'" || { echo "scantailor no se encuentra en la ruta por defecto: '$SE_BIN'"; exit 1; }
+[[ -f $PB_BIN ]] && echo "pdfbeads-kopi bin path ok '$PB_BIN'" || { echo "pdfbeads-kopi no se encuentra en la ruta por defecto '$PB_BIN', se usará 'pdfbeads'"; PB_BIN="pdfbeads"; }
 
  FILTER_BIN_DIR="$( dirname "${BASH_SOURCE[0]}" )/filters" #"~/bin/filters" /imagemagick/hpass
 
